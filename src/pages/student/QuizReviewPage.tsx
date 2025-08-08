@@ -13,7 +13,9 @@ import {
   AlertCircle,
   Info,
   Target,
-  TrendingUp
+  TrendingUp,
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 import './StudentQuizView.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -86,38 +88,40 @@ interface Submission {
   };
 }
 
-interface ReviewData {
+interface QuizData {
+  success: boolean;
   assignment: Assignment;
   questions: Question[];
-  submission: Submission;
-  showCorrectAnswers: boolean;
+  canEdit: boolean;
+  isStudent: boolean;
+  hasSubmitted: boolean;
+  canRetake: boolean;
+  attemptsUsed: number;
+  attemptsRemaining: number;
+  submission?: Submission;
 }
 
-const QuizReviewPage: React.FC = () => {
-  const { submissionId } = useParams<{ submissionId: string }>();
+const StudentQuizView: React.FC = () => {
+  const { assignmentId } = useParams<{ assignmentId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Get review data from navigation state or fetch from API
-  const reviewState = location.state as ReviewData;
-  
-  const [assignment, setAssignment] = useState<Assignment | null>(reviewState?.assignment || null);
-  const [questions, setQuestions] = useState<Question[]>(reviewState?.questions || []);
-  const [submission, setSubmission] = useState<Submission | null>(reviewState?.submission || null);
-  const [showCorrectAnswers, setShowCorrectAnswers] = useState<boolean>(reviewState?.showCorrectAnswers || false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [loading, setLoading] = useState(!reviewState);
+  const [quizData, setQuizData] = useState<QuizData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [takingQuiz, setTakingQuiz] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<{ [key: string]: any }>({});
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Get auth token
   const getAuthToken = () => {
     return localStorage.getItem('accessToken');
   };
 
-  // Fetch submission data if not provided via navigation
-  const fetchSubmissionData = async () => {
-    if (!submissionId) return;
-    
+  // Fetch quiz data
+  const fetchQuizData = async () => {
     try {
       setLoading(true);
       setError('');
@@ -128,7 +132,7 @@ const QuizReviewPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(API_BASE_URL+`/api/submissions/${submissionId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/quiz`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -143,17 +147,14 @@ const QuizReviewPage: React.FC = () => {
       }
 
       const data = await response.json();
-
+      
       if (data.success) {
-        setAssignment(data.assignment);
-        setQuestions(data.questions || []);
-        setSubmission(data.submission);
-        setShowCorrectAnswers(data.showCorrectAnswers || false);
+        setQuizData(data);
       } else {
-        setError(data.message || 'Failed to fetch submission data');
+        setError(data.message || 'Failed to fetch quiz data');
       }
     } catch (err) {
-      console.error('Error fetching submission:', err);
+      console.error('Error fetching quiz:', err);
       setError('Network error. Please check your connection.');
     } finally {
       setLoading(false);
@@ -161,65 +162,67 @@ const QuizReviewPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!reviewState && submissionId) {
-      fetchSubmissionData();
-    } else if (reviewState) {
-      setLoading(false);
+    if (assignmentId) {
+      fetchQuizData();
     }
-  }, [submissionId, reviewState]);
+  }, [assignmentId]);
+
+  // Timer for timed quizzes
+  useEffect(() => {
+    if (takingQuiz && quizData?.assignment.hasTimeLimit && timeRemaining !== null) {
+      if (timeRemaining <= 0) {
+        handleSubmitQuiz();
+        return;
+      }
+
+      const timer = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev === null || prev <= 0) return 0;
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [takingQuiz, timeRemaining]);
+
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleString();
   };
 
-  const formatDuration = (startTime: string, endTime: string): string => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const diffMs = end.getTime() - start.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffSecs = Math.floor((diffMs % 60000) / 1000);
+  const handleStartQuiz = () => {
+    if (!quizData) return;
     
-    if (diffMins > 0) {
-      return `${diffMins}m ${diffSecs}s`;
-    }
-    return `${diffSecs}s`;
-  };
-
-  const getStatusColor = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'graded':
-        return '#10b981';
-      case 'submitted':
-        return '#f59e0b';
-      case 'draft':
-        return '#6b7280';
-      default:
-        return '#6b7280';
+    setTakingQuiz(true);
+    setCurrentQuestion(0);
+    setAnswers({});
+    
+    if (quizData.assignment.hasTimeLimit && quizData.assignment.timeLimitMinutes) {
+      setTimeRemaining(quizData.assignment.timeLimitMinutes * 60);
     }
   };
 
-  const getScoreColor = (percentage: number): string => {
-    if (percentage >= 90) return '#10b981';
-    if (percentage >= 80) return '#84cc16';
-    if (percentage >= 70) return '#f59e0b';
-    if (percentage >= 60) return '#f97316';
-    return '#ef4444';
-  };
-
-  const getUserAnswer = (questionId: string) => {
-    return submission?.quizDetails?.answers?.[questionId];
-  };
-
-  const getQuestionResult = (questionId: string) => {
-    return submission?.quizDetails?.detailedResults?.[questionId];
-  };
-
-  const navigateToQuestion = (index: number) => {
-    setCurrentQuestion(index);
+  const handleAnswerChange = (questionId: string, answer: any) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }));
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestion < questions.length - 1) {
+    if (!quizData) return;
+    if (currentQuestion < quizData.questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     }
   };
@@ -230,10 +233,63 @@ const QuizReviewPage: React.FC = () => {
     }
   };
 
-  const getCorrectAnswersCount = (): number => {
-    if (!submission?.quizDetails?.detailedResults) return 0;
-    return Object.values(submission.quizDetails.detailedResults).filter((result: any) => result.correct).length;
+  const handleSubmitQuiz = async () => {
+    if (!quizData || submitting) return;
+    
+    try {
+      setSubmitting(true);
+      
+      const token = getAuthToken();
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}/submit`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ answers }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh quiz data to show submission
+        await fetchQuizData();
+        setTakingQuiz(false);
+      } else {
+        alert(data.message || 'Failed to submit quiz');
+      }
+    } catch (err) {
+      console.error('Error submitting quiz:', err);
+      alert('Failed to submit quiz. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const handleViewSubmission = () => {
+    if (!quizData?.submission) return;
+    
+    navigate(`/quiz/review/${quizData.submission.id}`, {
+      state: {
+        assignment: quizData.assignment,
+        questions: quizData.questions,
+        submission: quizData.submission,
+        showCorrectAnswers: quizData.assignment.showCorrectAnswers
+      }
+    });
+  };
+
+  // Calculate if user can take quiz
+  const canTakeQuiz = quizData && (!quizData.hasSubmitted || quizData.canRetake) && 
+                      (quizData.assignment.allowedAttempts === -1 || quizData.attemptsRemaining > 0);
+  
+  const isMaxedOut = quizData && quizData.attemptsUsed >= quizData.assignment.allowedAttempts && 
+                     quizData.assignment.allowedAttempts !== -1 && !quizData.canRetake;
 
   if (loading) {
     return (
@@ -245,7 +301,7 @@ const QuizReviewPage: React.FC = () => {
                 <ArrowLeft size={16} />
                 Back
               </button>
-              <h1 className="title">Loading Review...</h1>
+              <h1 className="title">Loading Quiz...</h1>
             </div>
           </div>
         </div>
@@ -260,7 +316,7 @@ const QuizReviewPage: React.FC = () => {
               animation: 'spin 1s linear infinite',
               margin: '0 auto 16px'
             }}></div>
-            <p style={{ color: '#6b7280' }}>Loading your submission...</p>
+            <p style={{ color: '#6b7280' }}>Loading quiz data...</p>
           </div>
         </div>
       </div>
@@ -286,7 +342,7 @@ const QuizReviewPage: React.FC = () => {
             <div className="empty-icon">
               <AlertCircle size={48} style={{ color: '#ef4444' }} />
             </div>
-            <h3 className="empty-title">Unable to Load Submission</h3>
+            <h3 className="empty-title">Unable to Load Quiz</h3>
             <p className="empty-description">{error}</p>
             <button onClick={() => navigate(-1)} className="btn btn-primary">
               Go Back
@@ -297,30 +353,239 @@ const QuizReviewPage: React.FC = () => {
     );
   }
 
-  if (!assignment || !submission || questions.length === 0) {
+  if (!quizData) {
+    return null;
+  }
+
+  // Taking quiz view
+  if (takingQuiz && quizData.questions.length > 0) {
+    const currentQ = quizData.questions[currentQuestion];
+    const currentAnswer = answers[currentQ.id];
+    const sortedAnswers = currentQ.answers ? [...currentQ.answers].sort((a, b) => a.answerOrder - b.answerOrder) : [];
+
     return (
       <div className="assignment-creator">
-        <div className="main-content">
-          <div className="card empty-state">
-            <div className="empty-icon">
-              <AlertCircle size={48} />
+        {/* Quiz Header */}
+        <div className="header">
+          <div className="header-content">
+            <div className="header-left">
+              <h1 className="title">{quizData.assignment.title}</h1>
+              <div className="badges">
+                <span className="badge badge-info">
+                  Question {currentQuestion + 1} of {quizData.questions.length}
+                </span>
+                <span className="points-display">
+                  {currentQ.points} point{currentQ.points !== 1 ? 's' : ''}
+                </span>
+                {timeRemaining !== null && (
+                  <span className={`badge ${timeRemaining < 300 ? 'badge-danger' : 'badge-secondary'}`}>
+                    <Clock size={14} />
+                    {formatTime(timeRemaining)}
+                  </span>
+                )}
+              </div>
             </div>
-            <h3 className="empty-title">Submission not found</h3>
-            <p className="empty-description">The submission you're looking for doesn't exist or has been removed.</p>
-            <button onClick={() => navigate(-1)} className="btn btn-primary">
-              Go Back
-            </button>
+          </div>
+        </div>
+
+        <div className="main-content">
+          <div className="card" style={{ maxWidth: '800px', margin: '0 auto' }}>
+            {/* Question */}
+            <div style={{ padding: '32px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '24px' }}>
+                {currentQ.questionText}
+              </h2>
+
+              {currentQ.imageUrl && (
+                <div style={{ marginBottom: '24px' }}>
+                  <img 
+                    src={currentQ.imageUrl} 
+                    alt="Question illustration" 
+                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
+                  />
+                </div>
+              )}
+
+              {/* Answer Options */}
+              {currentQ.questionType === 'multiple_choice' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {sortedAnswers.map((answer) => (
+                    <label
+                      key={answer.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px',
+                        border: '2px solid',
+                        borderColor: currentAnswer?.answerId === answer.id ? '#3b82f6' : '#e5e7eb',
+                        borderRadius: '8px',
+                        backgroundColor: currentAnswer?.answerId === answer.id ? '#eff6ff' : '#fff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQ.id}`}
+                        value={answer.id}
+                        checked={currentAnswer?.answerId === answer.id}
+                        onChange={() => handleAnswerChange(currentQ.id, { answerId: answer.id })}
+                        style={{ marginRight: '12px' }}
+                      />
+                      <span style={{ fontSize: '16px' }}>{answer.answerText}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {currentQ.questionType === 'true_false' && (
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  {sortedAnswers.map((answer) => (
+                    <label
+                      key={answer.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '16px 32px',
+                        border: '2px solid',
+                        borderColor: currentAnswer?.answerId === answer.id ? '#3b82f6' : '#e5e7eb',
+                        borderRadius: '8px',
+                        backgroundColor: currentAnswer?.answerId === answer.id ? '#eff6ff' : '#fff',
+                        cursor: 'pointer',
+                        flex: 1,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQ.id}`}
+                        value={answer.id}
+                        checked={currentAnswer?.answerId === answer.id}
+                        onChange={() => handleAnswerChange(currentQ.id, { answerId: answer.id })}
+                        style={{ marginRight: '8px' }}
+                      />
+                      <span style={{ fontSize: '16px', fontWeight: '500' }}>{answer.answerText}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {currentQ.questionType === 'short_answer' && (
+                <input
+                  type="text"
+                  value={currentAnswer?.textAnswer || ''}
+                  onChange={(e) => handleAnswerChange(currentQ.id, { textAnswer: e.target.value })}
+                  placeholder="Enter your answer"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    fontSize: '16px'
+                  }}
+                />
+              )}
+
+              {currentQ.questionType === 'essay' && (
+                <textarea
+                  value={currentAnswer?.textAnswer || ''}
+                  onChange={(e) => handleAnswerChange(currentQ.id, { textAnswer: e.target.value })}
+                  placeholder="Enter your answer"
+                  rows={6}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    fontSize: '16px',
+                    resize: 'vertical'
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Navigation */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              padding: '24px 32px',
+              borderTop: '1px solid #e5e7eb'
+            }}>
+              <button
+                onClick={handlePreviousQuestion}
+                disabled={currentQuestion === 0 || quizData.assignment.cantGoBack}
+                className="btn btn-secondary"
+              >
+                <ArrowLeft size={16} />
+                Previous
+              </button>
+
+              {currentQuestion < quizData.questions.length - 1 ? (
+                <button
+                  onClick={handleNextQuestion}
+                  className="btn btn-primary"
+                >
+                  Next
+                  <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmitQuiz}
+                  disabled={submitting}
+                  className="btn btn-success"
+                >
+                  {submitting ? (
+                    <>
+                      <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} />
+                      Submit Quiz
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {/* Question Navigator */}
+            <div style={{ padding: '24px 32px', borderTop: '1px solid #e5e7eb' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#6b7280' }}>
+                Question Navigator
+              </h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {quizData.questions.map((q, index) => (
+                  <button
+                    key={q.id}
+                    onClick={() => !quizData.assignment.cantGoBack && setCurrentQuestion(index)}
+                    disabled={quizData.assignment.cantGoBack && index < currentQuestion}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      border: '1px solid',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      cursor: quizData.assignment.cantGoBack && index < currentQuestion ? 'not-allowed' : 'pointer',
+                      borderColor: index === currentQuestion ? '#3b82f6' : answers[q.id] ? '#10b981' : '#e5e7eb',
+                      backgroundColor: index === currentQuestion ? '#eff6ff' : answers[q.id] ? '#f0fdf4' : '#fff',
+                      color: index === currentQuestion ? '#3b82f6' : answers[q.id] ? '#10b981' : '#6b7280'
+                    }}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  const currentQ = questions[currentQuestion];
-  const userAnswer = getUserAnswer(currentQ.id);
-  const questionResult = getQuestionResult(currentQ.id);
-  const sortedAnswers = currentQ.answers ? [...currentQ.answers].sort((a, b) => a.answerOrder - b.answerOrder) : [];
-
+  // Quiz Overview/Results view
   return (
     <div className="assignment-creator">
       {/* Header */}
@@ -331,560 +596,332 @@ const QuizReviewPage: React.FC = () => {
               <ArrowLeft size={16} />
               Back
             </button>
-            <h1 className="title">{assignment.title} - Review</h1>
+            <h1 className="title">{quizData.assignment.title}</h1>
             <div className="badges">
-              <span className="badge badge-info">
-                <Eye size={14} />
-                Attempt #{submission.attemptNumber}
+              <span className="badge badge-secondary">
+                {quizData.assignment.maxPoints} points
               </span>
-              <span className="badge" style={{ 
-                backgroundColor: submission.status === 'graded' ? '#f0fdf4' : '#fffbeb',
-                color: getStatusColor(submission.status)
-              }}>
-                {submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
-              </span>
-              <span className="points-display">
-                Question {currentQuestion + 1} of {questions.length}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Submission Summary */}
-      <div className="main-content" style={{ marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
-            {/* Score */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: getScoreColor(submission.percentage),
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <Award size={32} />
-                {submission.score}/{submission.maxScore}
-              </div>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: getScoreColor(submission.percentage), marginBottom: '4px' }}>
-                {submission.percentage?.toFixed(1)}%
-              </div>
-              <div style={{ fontSize: '14px', color: '#6b7280' }}>Final Score</div>
-            </div>
-
-            {/* Correct Answers */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#10b981',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <Target size={32} />
-                {getCorrectAnswersCount()}/{questions.length}
-              </div>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: '#10b981', marginBottom: '4px' }}>
-                {((getCorrectAnswersCount() / questions.length) * 100).toFixed(0)}%
-              </div>
-              <div style={{ fontSize: '14px', color: '#6b7280' }}>Correct Answers</div>
-            </div>
-
-            {/* Time Taken */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ 
-                fontSize: '36px', 
-                fontWeight: 'bold', 
-                color: '#3b82f6',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <Clock size={32} />
-                {submission.quizDetails ? 
-                  formatDuration(
-                    new Date(submission.submittedAt).toISOString(), 
-                    new Date(submission.submittedAt).toISOString()
-                  ) : 'N/A'}
-              </div>
-              <div style={{ fontSize: '14px', color: '#6b7280' }}>Time Taken</div>
-            </div>
-
-            {/* Submission Date */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ 
-                fontSize: '20px', 
-                fontWeight: 'bold', 
-                color: '#8b5cf6',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                <Calendar size={24} />
-                <div>
-                  <div>{formatDate(submission.submittedAt).split(',')[0]}</div>
-                  <div style={{ fontSize: '14px', fontWeight: 'normal' }}>
-                    {formatDate(submission.submittedAt).split(',')[1]}
-                  </div>
-                </div>
-              </div>
-              <div style={{ fontSize: '14px', color: '#6b7280' }}>Submitted</div>
-            </div>
-          </div>
-
-          {/* Instructor Feedback */}
-          {submission.feedback && (
-            <div style={{ marginTop: '24px', padding: '20px', backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-              <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <User size={16} />
-                Instructor Feedback
-              </h4>
-              <p style={{ fontSize: '15px', color: '#4b5563', margin: 0, lineHeight: '1.6' }}>{submission.feedback}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
-        {/* Main Question Review Area */}
-        <div className="card" style={{ padding: '32px' }}>
-          {/* Question Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <h2 className="card-header" style={{ margin: 0 }}>
-                  Question {currentQuestion + 1}
-                </h2>
-                <span className="badge badge-secondary">
-                  {currentQ.points} point{currentQ.points !== 1 ? 's' : ''}
-                </span>
+              {quizData.assignment.hasTimeLimit && (
                 <span className="badge badge-info">
-                  {currentQ.questionType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  <Clock size={14} />
+                  {quizData.assignment.timeLimitMinutes} minutes
                 </span>
-                {questionResult && (
-                  <span className={`badge ${questionResult.correct ? 'badge-success' : 'badge-danger'}`}>
-                    {questionResult.correct ? (
-                      <>
-                        <CheckCircle size={14} />
-                        Correct ({questionResult.points}/{currentQ.points})
-                      </>
-                    ) : (
-                      <>
-                        <XCircle size={14} />
-                        Incorrect (0/{currentQ.points})
-                      </>
-                    )}
-                  </span>
-                )}
+              )}
+              {/* Attempt Badge */}
+              {quizData.assignment.allowedAttempts !== -1 && (
+                <span className={`badge ${isMaxedOut ? 'badge-danger' : quizData.attemptsUsed > 0 ? 'badge-warning' : 'badge-info'}`}>
+                  {quizData.attemptsUsed}/{quizData.assignment.allowedAttempts} attempts used
+                </span>
+              )}
+              {quizData.assignment.allowedAttempts === -1 && (
+                <span className="badge badge-info">
+                  Unlimited attempts
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="main-content">
+        {/* Attempt Status Alert */}
+        {isMaxedOut && (
+          <div style={{ 
+            marginBottom: '24px',
+            padding: '16px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <Lock size={20} style={{ color: '#ef4444' }} />
+            <div>
+              <div style={{ fontWeight: '600', color: '#991b1b', marginBottom: '4px' }}>
+                All attempts used
+              </div>
+              <div style={{ fontSize: '14px', color: '#7f1d1d' }}>
+                You have used all {quizData.assignment.allowedAttempts} available attempt{quizData.assignment.allowedAttempts !== 1 ? 's' : ''} for this quiz.
+                {quizData.submission && ` Your final score: ${quizData.submission.score}/${quizData.submission.maxScore} (${quizData.submission.percentage?.toFixed(1)}%)`}
               </div>
             </div>
           </div>
+        )}
 
-          {/* Question Text */}
-          <div className="form-group" style={{ marginBottom: '32px' }}>
-            <p style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.6', color: '#374151', margin: 0 }}>
-              {currentQ.questionText}
-            </p>
-          </div>
-
-          {/* Question Image */}
-          {currentQ.imageUrl && (
-            <div style={{ marginBottom: '32px' }}>
-              <img 
-                src={currentQ.imageUrl} 
-                alt="Question illustration" 
-                style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', border: '1px solid #e5e7eb' }}
-              />
+        {/* Quiz Info Card */}
+        <div className="card" style={{ marginBottom: '24px' }}>
+          <h2 className="card-header">Quiz Information</h2>
+          
+          {quizData.assignment.description && (
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Description</h3>
+              <p style={{ color: '#4b5563', lineHeight: '1.6' }}>{quizData.assignment.description}</p>
             </div>
           )}
 
-          {/* Answer Review */}
-          <div className="form-group">
-            {(currentQ.questionType === 'multiple_choice' || currentQ.questionType === 'true_false') && sortedAnswers.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: currentQ.questionType === 'true_false' ? 'row' : 'column', gap: currentQ.questionType === 'true_false' ? '16px' : '12px' }}>
-                {sortedAnswers.map((answer) => {
-                  const isSelected = userAnswer?.answerId === answer.id;
-                  const isCorrect = answer.isCorrect;
-                  
-                  let borderColor = '#e5e7eb';
-                  let backgroundColor = '#fff';
-                  let textColor = '#374151';
-                  
-                  if (showCorrectAnswers) {
-                    if (isCorrect) {
-                      borderColor = '#10b981';
-                      backgroundColor = isSelected ? '#ecfdf5' : '#f0fdf4';
-                      textColor = '#065f46';
-                    } else if (isSelected && !isCorrect) {
-                      borderColor = '#ef4444';
-                      backgroundColor = '#fef2f2';
-                      textColor = '#991b1b';
-                    }
-                  } else if (isSelected) {
-                    borderColor = '#3b82f6';
-                    backgroundColor = '#eff6ff';
-                    textColor = '#1e40af';
-                  }
+          {quizData.assignment.instructions && (
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>Instructions</h3>
+              <p style={{ color: '#4b5563', lineHeight: '1.6' }}>{quizData.assignment.instructions}</p>
+            </div>
+          )}
 
-                  return (
-                    <div
-                      key={answer.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '16px',
-                        border: '2px solid',
-                        borderColor,
-                        borderRadius: '8px',
-                        backgroundColor,
-                        color: textColor,
-                        position: 'relative',
-                        ...(currentQ.questionType === 'true_false' && {
-                          minWidth: '120px',
-                          justifyContent: 'center',
-                          flex: 1
-                        })
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name={`question-${currentQ.id}`}
-                        value={answer.id}
-                        checked={isSelected}
-                        disabled
-                        style={{ 
-                          marginRight: currentQ.questionType === 'true_false' ? '8px' : '12px',
-                          opacity: 0.7
-                        }}
-                      />
-                      <span style={{ 
-                        fontSize: '16px',
-                        fontWeight: currentQ.questionType === 'true_false' ? '500' : 'normal',
-                        flex: 1
-                      }}>
-                        {answer.answerText}
-                      </span>
-                      
-                      {/* Status Icons */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
-                        {isSelected && (
-                          <span style={{ 
-                            fontSize: '12px', 
-                            fontWeight: '600', 
-                            color: textColor,
-                            backgroundColor: 'rgba(255,255,255,0.8)',
-                            padding: '2px 6px',
-                            borderRadius: '4px'
-                          }}>
-                            Your Answer
-                          </span>
-                        )}
-                        {showCorrectAnswers && isCorrect && (
-                          <CheckCircle size={20} style={{ color: '#10b981' }} />
-                        )}
-                        {showCorrectAnswers && isSelected && !isCorrect && (
-                          <XCircle size={20} style={{ color: '#ef4444' }} />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <Target size={16} style={{ color: '#6b7280' }} />
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Questions</span>
               </div>
-            )}
+              <div style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+                {quizData.questions.length}
+              </div>
+            </div>
 
-            {(currentQ.questionType === 'short_answer' || currentQ.questionType === 'essay') && (
-              <div>
-                <div style={{ marginBottom: '16px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
-                    Your Answer:
-                  </h4>
-                  <div style={{ 
-                    padding: '12px', 
-                    backgroundColor: '#f9fafb', 
-                    border: '1px solid #e5e7eb', 
-                    borderRadius: '6px',
-                    fontSize: '16px',
-                    color: '#374151',
-                    minHeight: currentQ.questionType === 'essay' ? '120px' : '40px'
-                  }}>
-                    {userAnswer?.textAnswer || <em style={{ color: '#9ca3af' }}>No answer provided</em>}
-                  </div>
+            <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <Award size={16} style={{ color: '#6b7280' }} />
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Total Points</span>
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+                {quizData.assignment.maxPoints}
+              </div>
+            </div>
+
+            <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <RefreshCw size={16} style={{ color: '#6b7280' }} />
+                <span style={{ fontSize: '14px', color: '#6b7280' }}>Attempts Remaining</span>
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: '600', color: quizData.attemptsRemaining === 0 ? '#ef4444' : '#111827' }}>
+                {quizData.assignment.allowedAttempts === -1 ? '∞' : quizData.attemptsRemaining}
+              </div>
+            </div>
+
+            {quizData.assignment.dueDate && (
+              <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <Calendar size={16} style={{ color: '#6b7280' }} />
+                  <span style={{ fontSize: '14px', color: '#6b7280' }}>Due Date</span>
                 </div>
-
-                {questionResult && (
-                  <div style={{ 
-                    padding: '12px', 
-                    backgroundColor: questionResult.correct ? '#f0fdf4' : '#fef2f2',
-                    border: `1px solid ${questionResult.correct ? '#bbf7d0' : '#fecaca'}`,
-                    borderRadius: '6px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      {questionResult.correct ? (
-                        <CheckCircle size={16} style={{ color: '#10b981' }} />
-                      ) : (
-                        <XCircle size={16} style={{ color: '#ef4444' }} />
-                      )}
-                      <span style={{ 
-                        fontSize: '14px', 
-                        fontWeight: '600',
-                        color: questionResult.correct ? '#065f46' : '#991b1b'
-                      }}>
-                        {questionResult.correct ? 'Correct' : 'Incorrect'} - {questionResult.points}/{currentQ.points} points
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                  {formatDate(quizData.assignment.dueDate)}
+                </div>
               </div>
-            )}
-
-            {/* Answer Feedback */}
-            {showCorrectAnswers && sortedAnswers.some(a => a.feedback && (a.isCorrect || userAnswer?.answerId === a.id)) && (
-              <div style={{ marginTop: '20px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Info size={16} />
-                  Answer Feedback
-                </h4>
-                {sortedAnswers.map((answer) => {
-                  const shouldShowFeedback = answer.feedback && (answer.isCorrect || userAnswer?.answerId === answer.id);
-                  if (!shouldShowFeedback) return null;
-                  
-                  return (
-                    <div key={answer.id} style={{ 
-                      padding: '12px', 
-                      backgroundColor: answer.isCorrect ? '#f0fdf4' : '#fef2f2',
-                      border: `1px solid ${answer.isCorrect ? '#bbf7d0' : '#fecaca'}`,
-                      borderRadius: '6px',
-                      marginBottom: '8px'
-                    }}>
-                      <div style={{ fontSize: '14px', color: '#374151', marginBottom: '4px', fontWeight: '500' }}>
-                        {answer.answerText}:
-                      </div>
-                      <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                        {answer.feedback}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="bottom-buttons" style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e5e7eb' }}>
-            <button
-              onClick={handlePreviousQuestion}
-              disabled={currentQuestion === 0}
-              className="btn btn-secondary"
-              type="button"
-            >
-              <ArrowLeft size={16} />
-              Previous
-            </button>
-            
-            {currentQuestion < questions.length - 1 ? (
-              <button
-                onClick={handleNextQuestion}
-                className="btn btn-primary"
-                type="button"
-              >
-                Next
-                <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate(-1)}
-                className="btn btn-success"
-                type="button"
-              >
-                <CheckCircle size={16} />
-                Finish Review
-              </button>
             )}
           </div>
         </div>
 
-        {/* Question Navigator Sidebar */}
-        <div className="card" style={{ padding: '24px', height: 'fit-content' }}>
-          <h3 className="card-header" style={{ marginBottom: '16px' }}>Review Progress</h3>
-          
-          {/* Overall Stats */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
-              <span>Score</span>
-              <span>{submission.percentage?.toFixed(1)}%</span>
-            </div>
-            <div style={{ 
-              width: '100%', 
-              height: '8px', 
-              backgroundColor: '#e5e7eb', 
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <div style={{ 
-                width: `${submission.percentage}%`,
-                height: '100%',
-                backgroundColor: getScoreColor(submission.percentage),
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
-
-          {/* Question Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '16px' }}>
-            {questions.map((q, index) => {
-              const result = getQuestionResult(q.id);
-              const isCorrect = result?.correct || false;
-              const wasAnswered = getUserAnswer(q.id)?.answerId || getUserAnswer(q.id)?.textAnswer;
+        {/* Previous Submission Card */}
+        {quizData.submission && (
+          <div className="card" style={{ marginBottom: '24px' }}>
+            <h2 className="card-header">Your Submission</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: '600', color: '#111827' }}>
+                  {quizData.submission.score}/{quizData.submission.maxScore}
+                </div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Score</div>
+              </div>
               
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => navigateToQuestion(index)}
-                  className={`question-nav-btn ${
-                    index === currentQuestion ? 'current' : 
-                    isCorrect ? 'correct' : 
-                    wasAnswered ? 'incorrect' : 'unanswered'
-                  }`}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '2px solid',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    borderColor: 
-                      index === currentQuestion ? '#3b82f6' :
-                      isCorrect ? '#10b981' :
-                      wasAnswered ? '#ef4444' : '#6b7280',
-                    backgroundColor:
-                      index === currentQuestion ? '#eff6ff' :
-                      isCorrect ? '#f0fdf4' :
-                      wasAnswered ? '#fef2f2' : '#fff',
-                    color:
-                      index === currentQuestion ? '#3b82f6' :
-                      isCorrect ? '#10b981' :
-                      wasAnswered ? '#ef4444' : '#6b7280',
-                    position: 'relative'
-                  }}
-                  type="button"
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ 
+                  fontSize: '24px', 
+                  fontWeight: '600',
+                  color: quizData.submission.percentage >= 70 ? '#10b981' : '#ef4444'
+                }}>
+                  {quizData.submission.percentage?.toFixed(1) || 0}%
+                </div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Percentage</div>
+              </div>
+              
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '20px', fontWeight: '600', color: '#8b5cf6' }}>
+                  #{quizData.submission.attemptNumber}
+                </div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Attempt</div>
+              </div>
+              
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  color: quizData.submission.status === 'graded' ? '#10b981' : '#f59e0b',
+                  textTransform: 'capitalize'
+                }}>
+                  {quizData.submission.status}
+                </div>
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>Status</div>
+              </div>
+            </div>
+
+            {quizData.submission.feedback && (
+              <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  Instructor Feedback
+                </h4>
+                <p style={{ fontSize: '14px', color: '#4b5563', margin: 0 }}>
+                  {quizData.submission.feedback}
+                </p>
+              </div>
+            )}
+
+            <button 
+              onClick={handleViewSubmission}
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+            >
+              <Eye size={16} />
+              Review Submission
+            </button>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="card">
+          <div style={{ display: 'flex', gap: '16px' }}>
+            {canTakeQuiz ? (
+              <>
+                <button 
+                  onClick={handleStartQuiz}
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
                 >
-                  {index + 1}
-                  {isCorrect && (
-                    <CheckCircle size={10} style={{ 
-                      position: 'absolute', 
-                      top: '2px', 
-                      right: '2px',
-                      color: '#10b981'
-                    }} />
-                  )}
-                  {wasAnswered && !isCorrect && (
-                    <XCircle size={10} style={{ 
-                      position: 'absolute', 
-                      top: '2px', 
-                      right: '2px',
-                      color: '#ef4444'
-                    }} />
+                  {quizData.hasSubmitted ? (
+                    <>
+                      <RefreshCw size={16} />
+                      Retake Quiz (Attempt {quizData.attemptsUsed + 1})
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight size={16} />
+                      Start Quiz
+                    </>
                   )}
                 </button>
-              );
-            })}
+                {quizData.hasSubmitted && quizData.submission && (
+                  <button 
+                    onClick={handleViewSubmission}
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                  >
+                    <Eye size={16} />
+                    View Last Attempt
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                {quizData.submission && (
+                  <button 
+                    onClick={handleViewSubmission}
+                    className="btn btn-primary"
+                    style={{ flex: 1 }}
+                  >
+                    <Eye size={16} />
+                    View Your Submission
+                  </button>
+                )}
+                {!quizData.submission && !canTakeQuiz && (
+                  <div style={{ 
+                    flex: 1,
+                    padding: '16px',
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '8px',
+                    textAlign: 'center'
+                  }}>
+                    <Lock size={20} style={{ color: '#ef4444', marginBottom: '8px' }} />
+                    <div style={{ color: '#991b1b', fontWeight: '600' }}>
+                      Quiz Unavailable
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#7f1d1d', marginTop: '4px' }}>
+                      {isMaxedOut ? 'All attempts have been used' : 'This quiz is not available'}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          {/* Legend */}
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-              <div style={{ width: '12px', height: '12px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', borderRadius: '2px', marginRight: '8px' }}></div>
-              <span>Current</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-              <div style={{ width: '12px', height: '12px', backgroundColor: '#f0fdf4', border: '1px solid #10b981', borderRadius: '2px', marginRight: '8px' }}></div>
-              <span>Correct</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-              <div style={{ width: '12px', height: '12px', backgroundColor: '#fef2f2', border: '1px solid #ef4444', borderRadius: '2px', marginRight: '8px' }}></div>
-              <span>Incorrect</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: '12px', height: '12px', backgroundColor: '#fff', border: '1px solid #6b7280', borderRadius: '2px', marginRight: '8px' }}></div>
-              <span>No Answer</span>
-            </div>
-          </div>
-
-          {/* Performance Summary */}
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={16} />
-              Performance Summary
-            </h4>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <CheckCircle size={12} />
-                  Correct
-                </span>
-                <span style={{ fontWeight: '500' }}>{getCorrectAnswersCount()}</span>
-              </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <XCircle size={12} />
-                  Incorrect
-                </span>
-                <span style={{ fontWeight: '500' }}>{questions.length - getCorrectAnswersCount()}</span>
-              </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Award size={12} />
-                  Points Earned
-                </span>
-                <span style={{ fontWeight: '500' }}>{submission.score}/{submission.maxScore}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Show Correct Answers Toggle */}
-          {assignment.showCorrectAnswers && (
-            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={showCorrectAnswers}
-                  onChange={(e) => setShowCorrectAnswers(e.target.checked)}
-                  style={{ width: '16px', height: '16px' }}
-                />
-                <span>Show Correct Answers</span>
-              </label>
+          {/* Additional Information */}
+          {canTakeQuiz && (
+            <div style={{ marginTop: '20px', padding: '16px', backgroundColor: '#eff6ff', borderRadius: '8px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Info size={16} />
+                Before You Start
+              </h4>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '14px', color: '#1e3a8a' }}>
+                {quizData.assignment.hasTimeLimit && (
+                  <li>You have {quizData.assignment.timeLimitMinutes} minutes to complete this quiz</li>
+                )}
+                {quizData.assignment.oneQuestionAtTime && (
+                  <li>Questions are presented one at a time</li>
+                )}
+                {quizData.assignment.cantGoBack && (
+                  <li>You cannot go back to previous questions</li>
+                )}
+                {quizData.assignment.shuffleAnswers && (
+                  <li>Answer choices are shuffled</li>
+                )}
+                {quizData.assignment.allowedAttempts !== -1 && (
+                  <li>
+                    This is attempt {quizData.attemptsUsed + 1} of {quizData.assignment.allowedAttempts}
+                  </li>
+                )}
+                <li>Make sure you have a stable internet connection</li>
+              </ul>
             </div>
           )}
+        </div>
 
-          {/* Additional Info */}
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-            <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: '1.4' }}>
-              <div style={{ marginBottom: '4px' }}>
-                <strong>Submitted:</strong> {formatDate(submission.submittedAt)}
-              </div>
-              {submission.gradedAt && (
-                <div style={{ marginBottom: '4px' }}>
-                  <strong>Graded:</strong> {formatDate(submission.gradedAt)}
-                </div>
+        {/* Quiz Settings Info */}
+        <div className="card" style={{ marginTop: '24px' }}>
+          <h3 className="card-header">Quiz Settings</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {quizData.assignment.showCorrectAnswers ? (
+                <CheckCircle size={16} style={{ color: '#10b981' }} />
+              ) : (
+                <XCircle size={16} style={{ color: '#ef4444' }} />
               )}
-              <div>
-                <strong>Status:</strong> {submission.status.charAt(0).toUpperCase() + submission.status.slice(1)}
-              </div>
+              <span style={{ fontSize: '14px', color: '#4b5563' }}>
+                {quizData.assignment.showCorrectAnswers ? 'Shows correct answers after submission' : 'Correct answers hidden'}
+              </span>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {quizData.assignment.oneQuestionAtTime ? (
+                <CheckCircle size={16} style={{ color: '#10b981' }} />
+              ) : (
+                <XCircle size={16} style={{ color: '#ef4444' }} />
+              )}
+              <span style={{ fontSize: '14px', color: '#4b5563' }}>
+                {quizData.assignment.oneQuestionAtTime ? 'One question at a time' : 'All questions visible'}
+              </span>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {!quizData.assignment.cantGoBack ? (
+                <CheckCircle size={16} style={{ color: '#10b981' }} />
+              ) : (
+                <XCircle size={16} style={{ color: '#ef4444' }} />
+              )}
+              <span style={{ fontSize: '14px', color: '#4b5563' }}>
+                {!quizData.assignment.cantGoBack ? 'Can review previous questions' : 'Cannot go back'}
+              </span>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {quizData.assignment.shuffleAnswers ? (
+                <CheckCircle size={16} style={{ color: '#10b981' }} />
+              ) : (
+                <XCircle size={16} style={{ color: '#ef4444' }} />
+              )}
+              <span style={{ fontSize: '14px', color: '#4b5563' }}>
+                {quizData.assignment.shuffleAnswers ? 'Answers shuffled' : 'Answers in fixed order'}
+              </span>
             </div>
           </div>
         </div>
@@ -893,4 +930,4 @@ const QuizReviewPage: React.FC = () => {
   );
 };
 
-export default QuizReviewPage;
+export default StudentQuizView;
