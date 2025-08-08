@@ -1,0 +1,88 @@
+
+/* src/components/teacher/MathEditor.css */
+.math-editor {
+  margin-bottom: 20px;
+}
+
+.math-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.math-symbols-toggle {
+  padding: 8px 15px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.math-symbols-toggle:hover {
+  background-color: #2980b9;
+}
+
+.math-hint {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.math-symbols-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+  gap: 5px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.math-symbol-btn {
+  padding: 10px;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  font-size: 18px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.math-symbol-btn:hover {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.math-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+}
+
+.math-preview {
+  margin-top: 10px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.math-preview strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.math-preview-content {
+  font-size: 16px;
+  line-height: 1.6;
+}

@@ -1,0 +1,100 @@
+
+/* src/components/teacher/QuestionEditor.css */
+.question-editor {
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  background-color: #f8f9fa;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.question-header h4 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.btn-delete {
+  padding: 6px 12px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.btn-delete:hover {
+  background-color: #c0392b;
+}
+
+.options-section {
+  margin-top: 20px;
+}
+
+.options-section > label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.option-editor {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.option-editor input[type="checkbox"] {
+  margin-top: 12px;
+}
+
+.option-editor .math-editor {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.btn-remove-option {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #e74c3c;
+  background-color: white;
+  color: #e74c3c;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  transition: all 0.3s;
+  margin-top: 8px;
+}
+
+.btn-remove-option:hover {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-add-option {
+  padding: 8px 15px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.btn-add-option:hover {
+  background-color: #27ae60;
+}
+
+/*
