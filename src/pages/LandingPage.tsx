@@ -73,10 +73,10 @@ const LandingPage: React.FC = () => {
             navigate('/admin');
             break;
           case 'teacher':
-            navigate('/teacher');
+            navigate('/teacher/courses');
             break;
           case 'student':
-            navigate('/student');
+            navigate('/student/courses');
             break;
           default:
             navigate('/dashboard');
@@ -168,32 +168,7 @@ const LandingPage: React.FC = () => {
             </button>
           </p>
           
-          <div className="demo-accounts">
-            <p className="demo-title">Demo Accounts:</p>
-            <div className="demo-buttons">
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'admin@demo.com', password: 'demo123' })}
-                className="demo-button admin"
-              >
-                👨‍💼 Admin Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'teacher@demo.com', password: 'demo123' })}
-                className="demo-button teacher"
-              >
-                👨‍🏫 Teacher Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ email: 'student@demo.com', password: 'demo123' })}
-                className="demo-button student"
-              >
-                👨‍🎓 Student Demo
-              </button>
-            </div>
-          </div>
+      
         </div>
       </div>
     </div>
