@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout'; // Adjust path as needed
 import './TeacherAssignments.css';
 import MathSymbolPicker from '../utils/MathSymbolPicker';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Type definitions
 interface Assignment {
@@ -603,7 +604,7 @@ const AssignmentCreator: React.FC = () => {
         setIsLoading(true);
         setLoadError('');
 
-        const response = await fetch(`http://localhost:3000/api/assignments/${assignmentId}`, {
+        const response = await fetch(API_BASE_URL+`/api/assignments/${assignmentId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

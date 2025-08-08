@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import './TeacherQuizReviewPage.css';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface Answer {
     id: string;
@@ -145,7 +146,7 @@ useEffect(() => {
     const fetchQuizData = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://localhost:3000/api/teacher-review/${quizId}`, {
+            const response = await fetch(API_BASE_URL+`/api/teacher-review/${quizId}`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('accessToken')}`,

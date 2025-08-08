@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import './TeacherCoursePage.css';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface Assignment {
   id: string;
@@ -60,7 +61,7 @@ const TeacherCoursePage: React.FC = () => {
     const fetchAssignments = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:3000/api/assignments/course/${courseId}`, {
+        const response = await fetch(API_BASE_URL+`/api/assignments/course/${courseId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

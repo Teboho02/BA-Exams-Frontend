@@ -14,6 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import './StudentQuizView.css';
+ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Updated types to match your API
 interface Assignment {
@@ -122,7 +123,7 @@ const QuizAttemptPage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:3000/api/assignments/${assignmentId}`, {
+      const response = await fetch(API_BASE_URL+`/api/assignments/${assignmentId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -286,7 +287,7 @@ const QuizAttemptPage: React.FC = () => {
         }
       });
 
-      const response = await fetch(`http://localhost:3000/api/assignments/${assignmentId}/submit`, {
+      const response = await fetch(API_BASE_URL+`/api/assignments/${assignmentId}/submit`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

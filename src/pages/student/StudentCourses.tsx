@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import './StudentCourses.css'; // We'll create this CSS file
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Types based on your API response structure
 interface EnrolledCourse {
@@ -68,27 +69,27 @@ const StudentCourses: React.FC = () => {
       const queryString = params.toString();
 
       // Dynamic API URL based on environment
-      const getApiBaseUrl = () => {
-        // In development, detect ports
-        if (window.location.hostname === 'localhost') {
-          const currentPort = window.location.port;
+      // const getApiBaseUrl = () => {
+      //   // In development, detect ports
+      //   if (window.location.hostname === 'localhost') {
+      //     const currentPort = window.location.port;
 
-          // If React is on 5173 (Vite), API is on 3000
-          if (currentPort === '5173') {
-            return 'http://localhost:3000';
-          }
-          // If React is on 3001, API is on 3000
-          if (currentPort === '3001') {
-            return 'http://localhost:3000';
-          }
-          // Default fallback to API on 3000
-          return 'http://localhost:3000';
-        }
-        // In production, assume API is on same domain
-        return '';
-      };
+      //     // If React is on 5173 (Vite), API is on 3000
+      //     if (currentPort === '5173') {
+      //       return 'http://localhost:3000';
+      //     }
+      //     // If React is on 3001, API is on 3000
+      //     if (currentPort === '3001') {
+      //       return 'http://localhost:3000';
+      //     }
+      //     // Default fallback to API on 3000
+      //     return 'http://localhost:3000';
+      //   }
+      //   // In production, assume API is on same domain
+      //   return '';
+      // };
 
-      const apiBase = getApiBaseUrl();
+      const apiBase = API_BASE_URL;
       const url = `${apiBase}/api/courses/user/enrollments${queryString ? `?${queryString}` : ''}`;
 
       console.log('Fetching from URL:', url);

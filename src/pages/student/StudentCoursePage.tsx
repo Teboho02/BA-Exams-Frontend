@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import type { CourseDetails, CourseContent } from '../../types/teacher.types';
 import './StudentCoursesPage.css';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface ContentViewer {
   isOpen: boolean;

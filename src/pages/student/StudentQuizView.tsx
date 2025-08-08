@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {Clock, Calendar,Lock,Eye,EyeOff,Play,BookOpen,AlertCircle,CheckCircle,Timer,Users,X,ArrowLeft} from 'lucide-react';
 import './StudentQuizView.css';
 //import Layout from '../../components/Layout';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Updated types to match your API response
 interface Assignment {
@@ -107,7 +108,7 @@ const StudentQuizView: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:3000/api/assignments/${assignmentId}`, {
+      const response = await fetch(API_BASE_URL`http://localhost:3000/api/assignments/${assignmentId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

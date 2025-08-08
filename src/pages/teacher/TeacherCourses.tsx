@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import CourseForm from '../../components/teacher/CourseForm';
 import type { Course } from '../../types/teacher.types';
 import './TeacherCourses.css';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface ApiCourse {
   id: string;
@@ -55,7 +56,7 @@ const TeacherCourses: React.FC = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3000/api/courses', {
+      const response = await fetch(API_BASE_URL+'/api/courses', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -128,7 +129,7 @@ const TeacherCourses: React.FC = () => {
         endDate: courseData.endDate?.toISOString(),
       };
 
-      const response = await fetch('http://localhost:3000/api/courses', {
+      const response = await fetch(API_BASE_URL+'/api/courses', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
