@@ -9,7 +9,6 @@ import {
   User,
   Calendar,
   Award,
-  FileText,
   Eye,
   AlertCircle,
   Info,

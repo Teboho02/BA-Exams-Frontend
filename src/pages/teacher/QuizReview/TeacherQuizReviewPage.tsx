@@ -170,15 +170,6 @@ useEffect(() => {
 }, [quizId]);
 
 
-    const getPerformanceLevelColor = (level: string) => {
-        switch (level) {
-            case 'excellent': return '#10b981';
-            case 'good': return '#3b82f6';
-            case 'satisfactory': return '#f59e0b';
-            case 'needs_attention': return '#ef4444';
-            default: return '#6b7280';
-        }
-    };
 
     const getLetterGradeColor = (grade: string) => {
         switch (grade) {

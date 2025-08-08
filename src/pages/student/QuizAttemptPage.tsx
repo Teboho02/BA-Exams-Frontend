@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Clock, 
   CheckCircle, 
   AlertCircle, 
   ArrowLeft, 
@@ -64,12 +63,6 @@ interface QuestionAnswer {
   isCorrect: boolean;
   feedback?: string;
   answerOrder: number;
-}
-
-interface QuizData {
-  assignment: Assignment;
-  questions: Question[];
-  canEdit: boolean;
 }
 
 interface Answer {

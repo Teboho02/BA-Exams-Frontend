@@ -1,15 +1,80 @@
 import React, { useState } from 'react';
-import type { Assignment, Submission } from '../../types/teacher.types';
-//import type { Assignment, Submission, Question } from '../../types/teacher.types';
-
 import './SubmissionViewer.css';
 
+interface Option {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+
+interface Question {
+  id: string;
+  type: 'multiple-choice' | 'short-answer' | 'essay' | 'mathematical';
+  question: string;
+  points: number;
+  options?: Option[];
+  correctAnswer?: string | string[];
+  explanation?: string;
+}
+export interface AssignmentSettings {
+  autoGrade: boolean;
+  timeLimit?: number;
+  allowMultipleAttempts: boolean;
+  maxAttempts?: number;
+  showCorrectAnswers: boolean;
+  showResultsAfterSubmission: boolean;
+  dueDate?: string;
+  availableFrom?: string;
+  availableUntil?: string;
+}
+
+
+interface Assignment {
+  id: string;
+  title: string;
+  description: string;
+  questions: Question[];
+  totalPoints: number;
+  settings: AssignmentSettings;
+  createdAt: string;
+  updatedAt: string;
+  teacherId: string;
+  classId: string;
+  status: 'draft' | 'published' | 'closed';
+}
+
+
+export interface Answer {
+  questionId: string;
+  answer: string | string[];
+  isCorrect?: boolean;
+  pointsEarned?: number;
+  pointsAwarded?: number; // For manual grading
+}
 interface SubmissionViewerProps {
   assignment: Assignment;
   submissions: Submission[];
   onGradeSubmission?: (submissionId: string, grades: { questionId: string; points: number }[]) => void;
 }
 
+interface Submission {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  answers: Answer[];
+  score: number;
+  percentage: number;
+  status: 'in-progress' | 'submitted' | 'graded';
+  startedAt: string;
+  submittedAt?: string;
+  timeTaken: number; // in seconds
+  attemptNumber: number;
+  feedback?: string;
+  gradedAt?: string;
+  gradedBy?: string;
+}
 const SubmissionViewer: React.FC<SubmissionViewerProps> = ({ 
   assignment, 
   submissions, 
@@ -20,12 +85,12 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
   const [sortBy, setSortBy] = useState<'name' | 'time' | 'score'>('name');
   const [manualGrades, setManualGrades] = useState<{ [key: string]: number }>({});
 
-  const filteredSubmissions = submissions.filter(sub => {
+  const filteredSubmissions = submissions.filter((sub: Submission) => {
     if (filter === 'all') return true;
     return sub.status === filter;
   });
 
-  const sortedSubmissions = [...filteredSubmissions].sort((a, b) => {
+  const sortedSubmissions = [...filteredSubmissions].sort((a: Submission, b: Submission) => {
     switch (sortBy) {
       case 'name':
         return a.studentName.localeCompare(b.studentName);
@@ -38,11 +103,13 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
     }
   });
 
-  const formatDateTime = (date: Date) => {
+  const formatDateTime = (date: string | Date | undefined) => {
+    if (!date) return 'Not submitted';
     return new Date(date).toLocaleString();
   };
 
-  const formatTime = (minutes: number) => {
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
@@ -91,7 +158,7 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
         <div className="viewer-controls">
           <select 
             value={filter} 
-            onChange={(e) => setFilter(e.target.value as any)}
+            onChange={(e) => setFilter(e.target.value as 'all' | 'submitted' | 'graded' | 'in-progress')}
             className="filter-select"
           >
             <option value="all">All Submissions</option>
@@ -102,7 +169,7 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
           
           <select 
             value={sortBy} 
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as 'name' | 'time' | 'score')}
             className="sort-select"
           >
             <option value="name">Sort by Name</option>
@@ -126,7 +193,7 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
               </tr>
             </thead>
             <tbody>
-              {sortedSubmissions.map(submission => (
+              {sortedSubmissions.map((submission: Submission) => (
                 <tr 
                   key={submission.id}
                   className={selectedSubmission?.id === submission.id ? 'selected' : ''}
@@ -181,8 +248,8 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
 
             <div className="answers-section">
               <h4>Answers</h4>
-              {assignment.questions.map((question, index) => {
-                const answer = selectedSubmission.answers.find(a => a.questionId === question.id);
+              {assignment.questions.map((question: Question, index: number) => {
+                const answer = selectedSubmission.answers.find((a: Answer) => a.questionId === question.id);
                 
                 return (
                   <div key={question.id} className="answer-item">
@@ -201,7 +268,7 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
                       <strong>Student's Answer:</strong>
                       {question.type === 'multiple-choice' && question.options ? (
                         <div>
-                          {question.options.map((option, optIndex) => (
+                          {question.options.map((option, optIndex: number) => (
                             <div 
                               key={option.id} 
                               className={`option ${
@@ -215,13 +282,17 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
                           ))}
                         </div>
                       ) : (
-                        <p>{answer?.answer || 'No answer provided'}</p>
+                        <p>{Array.isArray(answer?.answer) ? answer.answer.join(', ') : answer?.answer || 'No answer provided'}</p>
                       )}
                     </div>
 
                     {question.correctAnswer && (
                       <div className="correct-answer">
-                        <strong>Correct Answer:</strong> {question.correctAnswer}
+                        <strong>Correct Answer:</strong> {
+                          Array.isArray(question.correctAnswer) 
+                            ? question.correctAnswer.join(', ') 
+                            : question.correctAnswer
+                        }
                       </div>
                     )}
 
@@ -238,7 +309,7 @@ const SubmissionViewer: React.FC<SubmissionViewerProps> = ({
                           type="number"
                           min="0"
                           max={question.points}
-                          value={manualGrades[question.id] || answer?.pointsAwarded || 0}
+                          value={manualGrades[question.id] || answer?.pointsEarned || 0}
                           onChange={(e) => handleGradeChange(question.id, parseInt(e.target.value) || 0)}
                         />
                         <span>/ {question.points}</span>

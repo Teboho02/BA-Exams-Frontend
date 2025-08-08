@@ -748,7 +748,7 @@ const AssignmentCreator: React.FC = () => {
             ...baseQuestion,
             answers: q.answers
               .filter(a => a.text.trim())
-              .map((a, answerIndex) => ({
+              .map((a, _answerIndex) => ({
                 text: a.text.trim(),
                 correct: a.correct,
                 feedback: a.feedback || ''

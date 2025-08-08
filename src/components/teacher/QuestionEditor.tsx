@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
-import type { Question, Option } from '../../types/teacher.types';
 import MathEditor from './MathEditor';
 import './QuestionEditor.css';
+
+// Base types
+ interface Option {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+ interface Question {
+  id: string;
+  type: 'multiple-choice' | 'short-answer' | 'essay' | 'mathematical';
+  question: string;
+  points: number;
+  options?: Option[];
+  correctAnswer?: string | string[];
+  explanation?: string;
+}
+
 
 interface QuestionEditorProps {
   question: Question;
@@ -33,12 +50,12 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, onChange, onD
   };
 
   const removeOption = (optionIndex: number) => {
-    const newOptions = question.options?.filter((_, i) => i !== optionIndex);
+    const newOptions = question.options?.filter((_: Option, i: number) => i !== optionIndex);
     onChange({ ...question, options: newOptions });
   };
 
   const toggleCorrectOption = (optionIndex: number) => {
-    const newOptions = question.options?.map((opt, i) => ({
+    const newOptions = question.options?.map((opt: Option, i: number) => ({
       ...opt,
       isCorrect: question.type === 'multiple-choice' ? i === optionIndex : 
                  i === optionIndex ? !opt.isCorrect : opt.isCorrect
@@ -93,7 +110,7 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, onChange, onD
       {question.type === 'multiple-choice' && (
         <div className="options-section">
           <label>Answer Options</label>
-          {question.options?.map((option, optionIndex) => (
+          {question.options?.map((option: Option, optionIndex: number) => (
             <div key={option.id} className="option-editor">
               <input
                 type="checkbox"

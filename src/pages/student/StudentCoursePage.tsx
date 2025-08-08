@@ -58,7 +58,7 @@ const StudentCoursePage: React.FC = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [expandedSections, setExpandedSections] = useState<string[]>([]);
+//  const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [contentViewer, setContentViewer] = useState<ContentViewer>({
     isOpen: false,
     content: null,
