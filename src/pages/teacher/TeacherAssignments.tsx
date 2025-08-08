@@ -813,8 +813,8 @@ const AssignmentCreator: React.FC = () => {
 
       // Determine API endpoint and method
       const url = isEditing 
-        ? `http://localhost:3000/api/assignments/${assignmentId}`
-        : `http://localhost:3000/api/assignments`;
+        ? API_BASE_URL`/api/assignments/${assignmentId}`
+        : API_BASE_URL+`/api/assignments`;
       const method = isEditing ? 'PUT' : 'POST';
 
       // Make the API call
