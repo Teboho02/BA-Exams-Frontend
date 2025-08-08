@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
 import type { CourseDetails, CourseContent } from '../../types/teacher.types';
 import './StudentCoursesPage.css';
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface ContentViewer {
   isOpen: boolean;
@@ -80,7 +80,7 @@ const StudentCoursePage: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:3000/api/assignments/course/${courseId}`, {
+      const response = await fetch(API_BASE_URL+`/api/assignments/course/${courseId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
