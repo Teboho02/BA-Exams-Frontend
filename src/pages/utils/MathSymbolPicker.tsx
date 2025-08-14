@@ -161,6 +161,8 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
   const customInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
+
+  console.log(targetRef);
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
