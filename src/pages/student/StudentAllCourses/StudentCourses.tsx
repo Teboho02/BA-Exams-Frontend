@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import Layout from '../../components/Layout';
+import Layout from '../../../components/Layout';
 import { useNavigate } from 'react-router-dom';
-import './StudentCourses.css'; // We'll create this CSS file
+import './StudentCourses.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Types based on your API response structure

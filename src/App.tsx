@@ -22,10 +22,7 @@
   import TeacherQuizReviewPage from './pages/teacher/QuizReview/TeacherQuizReviewPage';
 
   // Student Pages
-  import StudentDashboard from './pages/student/StudentDashboard';
-  import StudentCourses from './pages/student/StudentCourses';
-  import StudentAssignments from './pages/student/StudentAssignments';
-  import StudentQuizView from './pages/student/StudentQuizView';
+  import StudentCourses from './pages/student/StudentAllCourses/StudentCourses';
   import QuizAttemptPage from './pages/student/QuizAttemptPage/QuizAttemptPage';
   import StudentCoursePage from './pages/student/StudentCoursePage/StudentCoursePage';
   import StudentQuizReview from './pages/student/StudentQuizReview/StudentQuizReview';
@@ -60,10 +57,7 @@
           <Route path="/teacher/quiz-review/:quizId" element={<TeacherQuizReviewPage />} />
 
           {/* Student Routes */}
-          <Route path="/student" element={<StudentDashboard />} />
           <Route path="/student/courses" element={<StudentCourses />} />
-          <Route path="/student/assignments1" element={<StudentAssignments />} />
-          <Route path="/student/assignments/:assignmentId" element={<StudentQuizView />} />
           <Route path="/student/quizAttempt/:assignmentId" element={<QuizAttemptPage />} />
           <Route path="/student/courses/:courseId" element={<StudentCoursePage />} />
           <Route path="/student/quiz/review/:submissionId" element={<StudentQuizReview />} />

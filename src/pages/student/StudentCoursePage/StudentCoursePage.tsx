@@ -9,7 +9,7 @@ import ErrorDisplay from './components/ErrorDisplay';
 import CourseNotFound from './components/CourseNotFound';
 import { useCourseData } from './hooks/useCourseData';
 import type { ContentViewer, Assignment } from './types';
-import '../StudentCoursesPage.css';
+import './StudentCoursesPage.css';
 
 const StudentCoursePage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
