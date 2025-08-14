@@ -1111,3 +1111,121 @@ body.modal-open {
 .modal-overlay.open {
     overflow-y: auto;
 }
+
+/* LaTeX styling */
+.katex-display {
+    margin: 1em 0;
+    text-align: center;
+}
+
+.katex {
+    font-size: 1.1em;
+    line-height: 1.2;
+}
+
+.question-text .katex,
+.student-answer .katex,
+.correct-answer .katex {
+    display: inline-block;
+    margin: 0 0.2em;
+    vertical-align: middle;
+}
+
+.latex-error {
+    color: #ef4444;
+    background-color: #fef2f2;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-family: monospace;
+}
+
+/* Modal content spacing for LaTeX */
+.question-content .katex {
+    margin: 0.5em 0;
+}
+
+/* Fix for KaTeX square root and other math elements */
+.katex-wrapper {
+    display: inline-block;
+    max-width: 100%;
+    overflow-x: auto;
+    vertical-align: middle;
+}
+
+.katex-wrapper .katex {
+    display: inline-block !important;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.katex-wrapper .katex .base {
+    display: inline-block;
+    max-width: 100%;
+}
+
+/* Specific fix for square root */
+.katex .sqrt > .root {
+    border-left: 0.04em solid;
+    border-top: 0.04em solid;
+    border-top-left-radius: 0.2em;
+}
+
+.katex .sqrt > .vlist-t {
+    border-left: 0.04em solid;
+}
+
+/* Prevent square root from extending beyond container */
+.katex .sqrt .vlist-t .vlist-r .vlist .pstrut {
+    width: auto !important;
+}
+
+/* General LaTeX styling improvements */
+.katex-display {
+    margin: 1em 0;
+    text-align: center;
+    overflow-x: auto;
+}
+
+.katex {
+    font-size: 1.1em;
+    line-height: 1.2;
+}
+
+.question-text .katex-wrapper,
+.student-answer .katex-wrapper,
+.correct-answer .katex-wrapper {
+    margin: 0 0.2em;
+}
+
+.latex-error {
+    color: #ef4444;
+    background-color: #fef2f2;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-family: monospace;
+}
+
+/* Ensure proper text wrapping around math */
+.question-text,
+.student-answer div,
+.correct-answer div {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Modal content spacing for LaTeX */
+.question-content .katex-wrapper {
+    margin: 0.2em 0;
+}
+
+/* Responsive handling for mobile */
+@media (max-width: 768px) {
+    .katex-wrapper {
+        font-size: 0.9em;
+    }
+    
+    .katex-display {
+        font-size: 0.8em;
+        margin: 0.5em 0;
+    }
+}

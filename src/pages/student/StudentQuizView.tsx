@@ -18,7 +18,6 @@ import {
 import './StudentQuizView.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Types - Updated to match actual API response
 interface Assignment {
   id: string;
   courseId?: string;

@@ -16,7 +16,7 @@
   // Teacher Pages
   import TeacherDashboard from './pages/teacher/teacherDashboard/TeacherDashboard';
   import TeacherCourses from './pages/teacher/TeacherCourses';
-  import TeacherAssignments from './pages/teacher/TeacherAssignments';
+  import TeacherAssignments from './pages/teacher/TeacherAssignments/TeacherAssignments';
   //import TeacherGrades from './pages/teacher/TeacherGrades';
   import TeacherCoursePage from './pages/teacher/TeacherCoursePage';
   import AddContentPage from './pages/teacher/AddContentPage';
@@ -26,11 +26,10 @@
   import StudentDashboard from './pages/student/StudentDashboard';
   import StudentCourses from './pages/student/StudentCourses';
   import StudentAssignments from './pages/student/StudentAssignments';
-  import StudentGrades from './pages/student/StudentGrades';
   import StudentQuizView from './pages/student/StudentQuizView';
   import QuizAttemptPage from './pages/student/QuizAttemptPage/QuizAttemptPage';
-  import StudentCoursePage from './pages/student/StudentCoursePage';
-  import QuizReviewPage from './pages/student/QuizReviewPage';
+  import StudentCoursePage from './pages/student/StudentCoursePage/StudentCoursePage';
+  import StudentQuizReview from './pages/student/StudentQuizReview/StudentQuizReview';
   //import QuizResultsPage from './pages/student/QuizResultsPage';
 
   const App: React.FC = () => {
@@ -66,13 +65,10 @@
           <Route path="/student" element={<StudentDashboard />} />
           <Route path="/student/courses" element={<StudentCourses />} />
           <Route path="/student/assignments1" element={<StudentAssignments />} />
-          <Route path="/student/grades" element={<StudentGrades />} />
           <Route path="/student/assignments/:assignmentId" element={<StudentQuizView />} />
           <Route path="/student/quizAttempt/:assignmentId" element={<QuizAttemptPage />} />
           <Route path="/student/courses/:courseId" element={<StudentCoursePage />} />
-          
-          {/* Student Quiz Review Routes */}
-          <Route path="/student/quiz/review/:submissionId" element={<QuizReviewPage />} />
+          <Route path="/student/quiz/review/:submissionId" element={<StudentQuizReview />} />
 
 
           {/* Catch-all - redirect to landing page */}
