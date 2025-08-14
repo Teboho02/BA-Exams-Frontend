@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 
- const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface LoginForm {
   email: string;
@@ -24,6 +24,13 @@ interface LoginResponse {
   refreshToken?: string;
   errors?: any[];
 }
+
+// Cookie utility functions
+const setCookie = (name: string, value: string, days: number) => {
+  const expires = new Date();
+  expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Strict;Secure`;
+};
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -50,8 +57,7 @@ const LandingPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch(API_BASE_URL+'/api/auth/login', {
-        
+      const response = await fetch(API_BASE_URL + '/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,10 +68,10 @@ const LandingPage: React.FC = () => {
       const data: LoginResponse = await response.json();
 
       if (data.success && data.user && data.accessToken) {
-        // Store auth data in localStorage
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken || '');
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Store auth data in cookies that expire in 1 day
+        setCookie('accessToken', data.accessToken, 1);
+        setCookie('refreshToken', data.refreshToken || '', 1);
+        setCookie('user', JSON.stringify(data.user), 1);
 
         // Navigate based on user role
         switch (data.user.role) {
@@ -167,8 +173,6 @@ const LandingPage: React.FC = () => {
               Register here
             </button>
           </p>
-          
-      
         </div>
       </div>
     </div>
