@@ -88,6 +88,12 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
     const isValid = checkAuthAndRedirect();
     setIsLoading(false);
 
+
+    if(!isValid){
+
+        console.error("Invalid authentication state, redirecting to login");
+    }
+
     // Set up periodic auth checks (every 5 minutes)
     const authCheckInterval = setInterval(() => {
       const accessToken = getCookie('accessToken');
