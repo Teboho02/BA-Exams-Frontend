@@ -177,7 +177,7 @@ const MathTextArea: React.FC<{
       const textarea = textareaRef.current;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      
+      console.log(symbol);
       // Wrap LaTeX in $ delimiters
       const wrappedLatex = `$${latex}$`;
       
@@ -188,6 +188,7 @@ const MathTextArea: React.FC<{
       if (wrappedLatex.includes('{}')) {
         // Place cursor inside the brackets
         const index = wrappedLatex.indexOf('{}');
+        console.log(index);
         insertText = wrappedLatex.replace('{}', '{');
         cursorPositionAdjustment = 1;
       }
@@ -411,7 +412,7 @@ const MathInput: React.FC<{
       const input = inputRef.current;
       const start = input.selectionStart || 0;
       const end = input.selectionEnd || 0;
-      
+      console.log(symbol);
       // Wrap LaTeX in $ delimiters
       const wrappedLatex = `$${latex}$`;
       

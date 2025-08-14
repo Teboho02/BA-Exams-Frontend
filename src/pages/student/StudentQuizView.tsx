@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   ArrowRight,
   CheckCircle,
   XCircle,
   Clock,
-  User,
   Calendar,
   Award,
   Eye,
   AlertCircle,
   Info,
   Target,
-  TrendingUp,
   Lock,
   RefreshCw
 } from 'lucide-react';
@@ -119,7 +117,7 @@ interface QuizData {
 
 const StudentQuizView: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
-  const location = useLocation();
+//  const location = useLocation();
   const navigate = useNavigate();
   
   const [quizData, setQuizData] = useState<QuizData | null>(null);
