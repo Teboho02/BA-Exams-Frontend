@@ -15,11 +15,10 @@
 
   // Teacher Pages
   import TeacherDashboard from './pages/teacher/teacherDashboard/TeacherDashboard';
-  import TeacherCourses from './pages/teacher/TeacherCourses';
+  import TeacherCourses from './pages/teacher/TeacherAllCoursesPage/TeacherCourses';
   import TeacherAssignments from './pages/teacher/TeacherAssignments/TeacherAssignments';
   //import TeacherGrades from './pages/teacher/TeacherGrades';
-  import TeacherCoursePage from './pages/teacher/TeacherCoursePage';
-  import AddContentPage from './pages/teacher/AddContentPage';
+  import TeacherCoursePage from './pages/teacher/TeacherSpecificCourse/TeacherCoursePage';
   import TeacherQuizReviewPage from './pages/teacher/QuizReview/TeacherQuizReviewPage';
 
   // Student Pages
@@ -53,7 +52,6 @@
           <Route path="/teacher/courses" element={<TeacherCourses />} />
           <Route path="/teacher/assignments" element={<TeacherAssignments />} />
           <Route path="/teacher/courses/:courseId" element={<TeacherCoursePage />} />
-          <Route path="/teacher/courses/:courseId/add-content" element={<AddContentPage />} />
           
           <Route path="/teacher/courses/:courseId/assignments/create" element={<TeacherAssignments />} />
           <Route path="/teacher/courses/:courseId/assignment/:assignmentId/edit" element={<TeacherAssignments />} />

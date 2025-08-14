@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../../components/Layout';
-import CourseForm from '../../components/teacher/CourseForm';
-import type { Course } from '../../types/teacher.types';
+import Layout from '../../../components/Layout';
+import CourseForm from '../../../components/teacher/CourseForm';
+import type { Course } from '../../../types/teacher.types';
 import './TeacherCourses.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 

@@ -123,6 +123,7 @@ export const MathTextArea: React.FC<MathTextAreaProps> = ({
       const end = textarea.selectionEnd;
       
       const wrappedLatex = `$${latex}$`;
+      console.log(symbol, latex, wrappedLatex);
       
       let cursorPositionAdjustment = 0;
       let insertText = wrappedLatex;
@@ -131,6 +132,8 @@ export const MathTextArea: React.FC<MathTextAreaProps> = ({
         const index = wrappedLatex.indexOf('{}');
         insertText = wrappedLatex.replace('{}', '{');
         cursorPositionAdjustment = 1;
+
+        console.log(index, wrappedLatex, insertText);
       }
       
       const newValue = value.substring(0, start) + insertText + value.substring(end);

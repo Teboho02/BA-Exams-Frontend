@@ -18,6 +18,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     assignment,
     closeModal
 }) => {
+    console.log(assignment)
     return (
         <div className="modal-overlay" onClick={closeModal}>
             <div className="student-detail-modal" onClick={e => e.stopPropagation()}>

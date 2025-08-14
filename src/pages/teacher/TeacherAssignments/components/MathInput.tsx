@@ -119,7 +119,7 @@ export const MathInput: React.FC<MathInputProps> = ({
       const end = input.selectionEnd || 0;
       
       const wrappedLatex = `$${latex}$`;
-      
+      console.log(symbol, latex, wrappedLatex);
       const newValue = value.substring(0, start) + wrappedLatex + value.substring(end);
       onChange(newValue);
       
