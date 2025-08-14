@@ -1,8 +1,12 @@
+// MathSymbolPicker.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
-import './MathSymbolPicker.css'; // Import the CSS file
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+import './MathSymbolPicker.css';
 
-// Mathematical symbols organized by category
+// ... MATH_SYMBOLS constant remains the same ...
+
 const MATH_SYMBOLS = {
   Basic: [
     { symbol: 'x₁', latex: 'x_{1}', name: 'Subscript' },
@@ -139,6 +143,7 @@ const MATH_SYMBOLS = {
   ],
 };
 
+
 interface MathSymbolPickerProps {
   onInsert: (symbol: string, latex: string) => void;
   onClose: () => void;
@@ -148,9 +153,14 @@ interface MathSymbolPickerProps {
 const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, targetRef }) => {
   const [activeTab, setActiveTab] = useState<string>('Basic');
   const [searchTerm, setSearchTerm] = useState('');
+  const [customLatex, setCustomLatex] = useState('');
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [renderedPreview, setRenderedPreview] = useState('');
+  const [renderError, setRenderError] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
+  const customInputRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
-  console.log(targetRef);
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -173,8 +183,56 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
+  // Render LaTeX preview
+  useEffect(() => {
+    if (!isCustomMode || !customLatex.trim()) {
+      setRenderedPreview('');
+      setRenderError('');
+      return;
+    }
+
+    try {
+      const html = katex.renderToString(customLatex, {
+        throwOnError: false,
+        displayMode: false,
+        output: 'html',
+      });
+      setRenderedPreview(html);
+      setRenderError('');
+      
+      // Auto-scroll to show full preview
+      if (previewRef.current) {
+        previewRef.current.scrollTop = previewRef.current.scrollHeight;
+      }
+    } catch (error) {
+      setRenderError('Invalid LaTeX syntax');
+      setRenderedPreview('');
+    }
+  }, [customLatex, isCustomMode]);
+
   const handleSymbolClick = (symbol: string, latex: string) => {
     onInsert(symbol, latex);
+  };
+
+  const handleInsertCustomLatex = () => {
+    if (customLatex.trim() && !renderError) {
+      // Insert both the rendered HTML and raw LaTeX
+      onInsert(renderedPreview || customLatex, customLatex);
+      setCustomLatex('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !renderError) {
+      handleInsertCustomLatex();
+    }
+  };
+
+  const toggleCustomMode = () => {
+    setIsCustomMode(!isCustomMode);
+    if (!isCustomMode) {
+      setTimeout(() => customInputRef.current?.focus(), 0);
+    }
   };
 
   // Filter symbols based on search
@@ -197,7 +255,9 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
       <div ref={modalRef} className="math-symbol-modal">
         {/* Header */}
         <div className="math-symbol-header">
-          <h2 className="math-symbol-title">Insert Mathematical Symbol</h2>
+          <h2 className="math-symbol-title">
+            {isCustomMode ? 'Enter LaTeX Expression' : 'Insert Mathematical Symbol'}
+          </h2>
           <button
             onClick={onClose}
             className="math-symbol-close"
@@ -207,63 +267,125 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
           </button>
         </div>
 
-        {/* Search */}
-        <div className="math-symbol-search">
-          <input
-            type="text"
-            placeholder="Search symbols..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="math-symbol-search-input"
-            autoFocus
-          />
-        </div>
-
-        {/* Tabs */}
-        {!searchTerm && (
-          <div className="math-symbol-tabs">
-            {Object.keys(MATH_SYMBOLS).map((tab) => (
+        {/* Custom LaTeX Editor */}
+        {isCustomMode ? (
+          <div className="math-symbol-custom">
+            <div className="custom-latex-input-container">
+              <input
+                ref={customInputRef}
+                type="text"
+                placeholder="Enter LaTeX (e.g., x^2 + \sqrt{10})"
+                value={customLatex}
+                onChange={(e) => setCustomLatex(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="custom-latex-input"
+              />
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`math-symbol-tab ${activeTab === tab ? 'active' : ''}`}
+                onClick={handleInsertCustomLatex}
+                className="insert-custom-button"
+                disabled={!customLatex.trim() || !!renderError}
               >
-                {tab}
+                Insert
               </button>
-            ))}
+            </div>
+            
+            {/* Preview Area */}
+            <div className="latex-preview-container">
+              <div className="latex-preview-header">
+                <span>Preview:</span>
+                {renderError && <span className="latex-error">{renderError}</span>}
+              </div>
+              <div 
+                ref={previewRef}
+                className="latex-preview-content"
+                dangerouslySetInnerHTML={{ __html: renderedPreview || '' }}
+              />
+              {!renderedPreview && !renderError && (
+                <div className="latex-preview-placeholder">
+                  Type LaTeX to see preview...
+                </div>
+              )}
+            </div>
+            
+            <div className="custom-latex-examples">
+              <p>Examples:</p>
+              <ul>
+                <li><code>x^2 + \sqrt&#123;10&#125;</code></li>
+                <li><code>\frac&#123;1&#125;&#123;2&#125;</code></li>
+                <li><code>{"\\sum_{n=1}^{\\infty}"}</code></li>
+                <li><code>\int_a^b f(x)\,dx</code></li>
+              </ul>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {/* Search */}
+            <div className="math-symbol-search">
+              <input
+                type="text"
+                placeholder="Search symbols..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="math-symbol-search-input"
+                autoFocus
+              />
+            </div>
 
-        {/* Symbols Grid */}
-        <div className="math-symbol-content">
-          {symbols.length > 0 ? (
-            <div className="math-symbol-grid">
-              {symbols.map((item, index) => (
-                <button
-                  key={`${item.symbol}-${index}`}
-                  onClick={() => handleSymbolClick(item.symbol, item.latex)}
-                  className="math-symbol-button"
-                  title={`${item.name} (LaTeX: ${item.latex})`}
-                >
-                  <span className="math-symbol-char">{item.symbol}</span>
-                  <div className="math-symbol-tooltip">
-                    <div className="tooltip-name">{item.name}</div>
-                    <div className="tooltip-latex">{item.latex}</div>
-                  </div>
-                </button>
-              ))}
+            {/* Tabs */}
+            {!searchTerm && (
+              <div className="math-symbol-tabs">
+                {Object.keys(MATH_SYMBOLS).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`math-symbol-tab ${activeTab === tab ? 'active' : ''}`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Symbols Grid */}
+            <div className="math-symbol-content">
+              {symbols.length > 0 ? (
+                <div className="math-symbol-grid">
+                  {symbols.map((item, index) => (
+                    <button
+                      key={`${item.symbol}-${index}`}
+                      onClick={() => handleSymbolClick(item.symbol, item.latex)}
+                      className="math-symbol-button"
+                      title={`${item.name} (LaTeX: ${item.latex})`}
+                    >
+                      <span className="math-symbol-char">{item.symbol}</span>
+                      <div className="math-symbol-tooltip">
+                        <div className="tooltip-name">{item.name}</div>
+                        <div className="tooltip-latex">{item.latex}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="math-symbol-empty">
+                  No symbols found matching "{searchTerm}"
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="math-symbol-empty">
-              No symbols found matching "{searchTerm}"
-            </div>
-          )}
-        </div>
+          </>
+        )}
 
         {/* Footer */}
         <div className="math-symbol-footer">
+          <button
+            onClick={toggleCustomMode}
+            className="toggle-custom-mode"
+          >
+            {isCustomMode ? 'Show Symbol Picker' : 'Enter LaTeX Directly'}
+          </button>
           <p className="math-symbol-help">
-            Click a symbol to insert it at the cursor position. The symbol will be inserted along with its LaTeX code for proper rendering.
+            {isCustomMode
+              ? 'Type LaTeX expressions. Use \\ for commands. Preview updates as you type.'
+              : 'Click a symbol to insert it at the cursor position.'}
           </p>
         </div>
       </div>

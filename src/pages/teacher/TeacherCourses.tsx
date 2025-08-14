@@ -10,7 +10,7 @@ interface ApiCourse {
   id: string;
   title: string;
   code: string;
-  subject?: string; // Make subject optional
+  subject?: string;
   description: string;
   teacher: string;
   isActive: boolean;
@@ -38,6 +38,18 @@ const TeacherCourses: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [creating, setCreating] = useState(false);
+  
+  // Enrollment state
+  const [enrollModal, setEnrollModal] = useState<{ 
+    courseId: string | null; 
+    isOpen: boolean 
+  }>({ 
+    courseId: null, 
+    isOpen: false 
+  });
+  const [emailInput, setEmailInput] = useState('');
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+  const [enrollmentError, setEnrollmentError] = useState('');
 
   // Get auth token from localStorage
   const getAuthToken = () => {
@@ -65,7 +77,6 @@ const TeacherCourses: React.FC = () => {
       });
 
       if (response.status === 401) {
-        // Token expired or invalid
         localStorage.clear();
         navigate('/login');
         return;
@@ -74,17 +85,16 @@ const TeacherCourses: React.FC = () => {
       const data: ApiResponse = await response.json();
 
       if (data.success && data.courses) {
-        // Transform API courses to match our Course interface
         const transformedCourses: Course[] = data.courses.map((apiCourse: ApiCourse) => ({
           id: apiCourse.id,
           title: apiCourse.title,
           description: apiCourse.description,
           code: apiCourse.code,
-          subject: apiCourse.subject || 'General', // Provide default if missing
+          subject: apiCourse.subject || 'General',
           teacherId: apiCourse.teacher,
           students: apiCourse.enrolledStudents?.map(s => s.id) || [],
           isActive: apiCourse.isActive,
-          startDate: new Date(), // You may want to add these fields to your API
+          startDate: new Date(),
           endDate: new Date(), 
           createdAt: new Date(apiCourse.createdAt),
           maxStudents: apiCourse.maxStudents,
@@ -124,7 +134,6 @@ const TeacherCourses: React.FC = () => {
         description: courseData.description,
         maxStudents: courseData.maxStudents || 50,
         credits: courseData.credits || 3,
-        // Add these if your form supports them
         startDate: courseData.startDate?.toISOString(),
         endDate: courseData.endDate?.toISOString(),
       };
@@ -147,13 +156,12 @@ const TeacherCourses: React.FC = () => {
       const data: ApiResponse = await response.json();
 
       if (data.success && data.course) {
-        // Transform and add the new course to the list
         const newCourse: Course = {
           id: data.course.id,
           title: data.course.title,
           description: data.course.description,
           code: data.course.code,
-          subject: data.course.subject || 'General', // Provide default if missing
+          subject: data.course.subject || 'General',
           teacherId: data.course.teacher,
           students: [],
           isActive: data.course.isActive,
@@ -167,8 +175,6 @@ const TeacherCourses: React.FC = () => {
 
         setCourses(prev => [newCourse, ...prev]);
         setShowForm(false);
-        
-        // Show success message (you can add a toast notification here)
         console.log('Course created successfully!');
       } else {
         setError(data.message || 'Failed to create course');
@@ -178,6 +184,50 @@ const TeacherCourses: React.FC = () => {
       setError('Network error. Please try again.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  // Enroll student by email
+  const handleEnrollStudent = async (courseId: string, email: string) => {
+    try {
+      setEnrollmentError('');
+      setEnrollmentLoading(true);
+      
+      const token = getAuthToken();
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/enroll/email`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      });
+
+      if (response.status === 401) {
+        localStorage.clear();
+        navigate('/login');
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        fetchCourses(); // Refresh course data
+        setEnrollModal({ courseId: null, isOpen: false });
+        setEmailInput('');
+      } else {
+        setEnrollmentError(data.message || 'Failed to enroll student');
+      }
+    } catch (err) {
+      console.error('Error enrolling student:', err);
+      setEnrollmentError('Network error. Please try again.');
+    } finally {
+      setEnrollmentLoading(false);
     }
   };
 
@@ -244,6 +294,45 @@ const TeacherCourses: React.FC = () => {
           </div>
         )}
 
+        {/* Enrollment Modal */}
+        {enrollModal.isOpen && (
+          <div className="modal">
+            <div className="modal-content">
+              <h3>Enroll Student by Email</h3>
+              <p>Enter the student's email address:</p>
+              <input 
+                type="email" 
+                value={emailInput} 
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="student@example.com"
+                disabled={enrollmentLoading}
+              />
+              {enrollmentError && (
+                <p className="error-text">{enrollmentError}</p>
+              )}
+              <div className="modal-actions">
+                <button 
+                  onClick={() => {
+                    setEnrollModal({ courseId: null, isOpen: false });
+                    setEnrollmentError('');
+                  }} 
+                  disabled={enrollmentLoading}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => handleEnrollStudent(enrollModal.courseId!, emailInput)}
+                  disabled={enrollmentLoading || !emailInput}
+                  className="btn-primary"
+                >
+                  {enrollmentLoading ? 'Enrolling...' : 'Enroll'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="courses-grid">
           {courses.map(course => (
             <div 
@@ -272,6 +361,19 @@ const TeacherCourses: React.FC = () => {
               <div className="course-dates">
                 <span>📅 Start: {course.startDate.toLocaleDateString()}</span>
                 <span>🏁 End: {course.endDate.toLocaleDateString()}</span>
+              </div>
+              
+              {/* Enrollment Button */}
+              <div className="course-footer">
+                <button 
+                  className="enroll-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEnrollModal({ courseId: course.id, isOpen: true });
+                  }}
+                >
+                  Enroll Student
+                </button>
               </div>
             </div>
           ))}

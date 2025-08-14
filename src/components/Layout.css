@@ -284,3 +284,258 @@
     padding: 0.4rem 0.8rem;
   }
 }
+
+
+/* Menu styles */
+.menu-container {
+  position: relative;
+}
+
+.hamburger-menu {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.hamburger-menu:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.hamburger-line {
+  width: 20px;
+  height: 2px;
+  background-color: white;
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+  z-index: 1000;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.menu-item {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+  background-color: #f8f9fa;
+}
+
+.menu-item.sign-out {
+  color: #e74c3c;
+  font-weight: 500;
+}
+
+.menu-item.sign-out:hover {
+  background-color: #fef2f2;
+}
+
+/* Content area */
+.content {
+  flex: 1; /* fills remaining space under navbar */
+  padding: 1rem;
+  overflow: auto; /* scroll if content overflows */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .nav-brand {
+    font-size: 1rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-right {
+    gap: 0.5rem;
+  }
+
+  .role-indicator {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .content {
+    padding: 1rem 0.75rem;
+  }
+
+  .dropdown-menu {
+    right: -0.5rem;
+    min-width: 100px;
+  }
+
+  .menu-item {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .nav-brand {
+    font-size: 0.9rem;
+    max-width: calc(100vw - 120px);
+  }
+
+  .role-indicator {
+    display: none;
+  }
+
+  .content {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .hamburger-menu {
+    padding: 0.25rem;
+  }
+
+  .hamburger-line {
+    width: 18px;
+  }
+
+  .dropdown-menu {
+    right: -0.25rem;
+    min-width: 90px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .navbar {
+    padding: 1rem 1.5rem;
+  }
+
+  .content {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .navbar {
+    padding: 1rem 2rem;
+  }
+
+  .content {
+    padding: 2rem;
+    width: 100%;
+  }
+}
+
+
+/* Layout.css */
+/* Add to existing styles */
+
+/* New back arrow styles */
+.back-arrow {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.back-arrow:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.back-arrow svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+/* Updated navbar layout */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-brand {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 1rem;
+  }
+  
+  .back-arrow {
+    margin-right: 0.25rem;
+    padding: 0.25rem;
+  }
+  
+  .back-arrow svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .nav-brand {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-brand {
+    font-size: 0.9rem;
+    max-width: 150px;
+  }
+  
+  .role-indicator {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.6rem;
+  }
+}

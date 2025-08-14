@@ -951,3 +951,163 @@ body {
     padding: 40px 20px;
   }
 }
+
+
+/* Search Bar */
+.search-bar {
+    position: relative;
+    flex: 1;
+    max-width: 300px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 16px 10px 40px;
+    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--white);
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+
+/* Modal Styles - Complete Fix */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-in;
+    padding: 20px;
+    overflow-y: auto !important; /* Force scrolling */
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.student-detail-modal {
+    background: var(--white);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 1000px;
+    min-height: auto !important;
+    max-height: none !important; /* Override any existing max-height */
+    height: auto !important; /* Let it grow naturally */
+    box-shadow: var(--shadow-xl);
+    animation: slideUp 0.3s ease-out;
+    margin: 20px 0 40px 0; /* Extra bottom margin */
+    position: relative;
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--white);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    flex: 1;
+}
+
+.close-modal {
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: var(--transition);
+    margin-left: 20px;
+    line-height: 1;
+}
+
+.close-modal:hover {
+    color: var(--text-primary);
+}
+
+.modal-content {
+    padding: 24px;
+    width: 100%;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important; /* Ensure content is fully visible */
+}
+
+/* Force all modal children to be visible */
+.modal-content * {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Specifically target question reviews to ensure they're fully visible */
+.modal-content .question-review {
+    margin-bottom: 20px !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.modal-content .answers-review {
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Remove all scrollbar styling that might interfere */
+/* .modal-content::-webkit-scrollbar styles removed */
+
+/* Mobile responsive fixes */
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: 10px;
+    }
+    
+    .student-detail-modal {
+        width: calc(100% - 20px);
+        margin: 10px 0 40px 0;
+    }
+    
+    .modal-header {
+        padding: 16px 20px;
+    }
+    
+    .modal-header h2 {
+        font-size: 18px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+    }
+}
+
+/* Additional fix: ensure body doesn't interfere with modal scrolling */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* When modal is open, only the overlay should scroll */
+.modal-overlay.open {
+    overflow-y: auto;
+}

@@ -1,9 +1,12 @@
+// TeacherAssignments.tsx
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Save, Eye, EyeOff, Plus, Trash2, Edit, HelpCircle, Image, X, Lock, ArrowLeft, Calculator } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout'; // Adjust path as needed
 import './TeacherAssignments.css';
 import MathSymbolPicker from '../utils/MathSymbolPicker';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Type definitions
@@ -56,23 +59,6 @@ interface Question {
   caseSensitive?: boolean;
 }
 
-// interface QuizQuestion {
-//   id: string;
-//   question: string;
-//   options: string[];
-//   correctAnswer: number;
-//   points: number;
-// }
-
-// interface Quiz {
-//   id: string;
-//   title: string;
-//   description: string;
-//   questions: QuizQuestion[];
-//   timeLimit?: number;
-//   attempts: number;
-// }
-
 type ActiveTab = 'details' | 'questions';
 
 // Enhanced TextArea component with math symbol picker
@@ -86,6 +72,105 @@ const MathTextArea: React.FC<{
 }> = ({ value, onChange, placeholder, className, style, rows }) => {
   const [showMathPicker, setShowMathPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState('');
+
+  // Render mixed content (normal text + LaTeX)
+  useEffect(() => {
+    if (!previewRef.current) return;
+    
+    // Clear previous content
+    previewRef.current.innerHTML = '';
+    
+    if (!value.trim()) return;
+    
+    try {
+      // Create a temporary container
+      const container = document.createElement('div');
+      container.innerHTML = value;
+      
+      // Process all text nodes that contain LaTeX
+      const processNode = (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent || '';
+          const fragments = splitMixedContent(text);
+          
+          if (fragments.length > 1) {
+            const parent = node.parentNode;
+            fragments.forEach(fragment => {
+              if (fragment.type === 'text') {
+                parent?.insertBefore(document.createTextNode(fragment.content), node);
+              } else {
+                try {
+                  const span = document.createElement('span');
+                  span.innerHTML = katex.renderToString(fragment.content, {
+                    throwOnError: false,
+                    displayMode: false,
+                    output: 'html'
+                  });
+                  parent?.insertBefore(span, node);
+                } catch (err) {
+                  const error = err as katex.ParseError;
+                  console.error('LaTeX rendering error:', error);
+                  parent?.insertBefore(document.createTextNode(`$${fragment.content}$`), node);
+                }
+              }
+            });
+            parent?.removeChild(node);
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          Array.from(node.childNodes).forEach(processNode);
+        }
+      };
+      
+      // Process all nodes in the container
+      Array.from(container.childNodes).forEach(processNode);
+      
+      // Move processed content to preview
+      while (container.firstChild) {
+        previewRef.current.appendChild(container.firstChild);
+      }
+    } catch (err) {
+      const error = err as Error;
+      setError(`Error rendering content: ${error.message}`);
+    }
+  }, [value]);
+
+  // Split text into normal text and LaTeX fragments
+  const splitMixedContent = (text: string) => {
+    const fragments = [];
+    let currentIndex = 0;
+    const regex = /\$(.*?)\$/g;
+    
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      // Add text before the LaTeX
+      if (match.index > currentIndex) {
+        fragments.push({
+          type: 'text',
+          content: text.substring(currentIndex, match.index)
+        });
+      }
+      
+      // Add LaTeX content (without the $ delimiters)
+      fragments.push({
+        type: 'latex',
+        content: match[1]
+      });
+      
+      currentIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text after last LaTeX
+    if (currentIndex < text.length) {
+      fragments.push({
+        type: 'text',
+        content: text.substring(currentIndex)
+      });
+    }
+    
+    return fragments;
+  };
 
   const insertMathSymbol = (symbol: string, latex: string) => {
     if (textareaRef.current) {
@@ -93,19 +178,58 @@ const MathTextArea: React.FC<{
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       
-      console.log(latex)
-      // Insert the symbol at cursor position
-      const newValue = value.substring(0, start) + symbol + value.substring(end);
+      // Wrap LaTeX in $ delimiters
+      const wrappedLatex = `$${latex}$`;
+      
+      // Handle commands that need cursor positioning
+      let cursorPositionAdjustment = 0;
+      let insertText = wrappedLatex;
+      
+      if (wrappedLatex.includes('{}')) {
+        // Place cursor inside the brackets
+        const index = wrappedLatex.indexOf('{}');
+        insertText = wrappedLatex.replace('{}', '{');
+        cursorPositionAdjustment = 1;
+      }
+      
+      const newValue = value.substring(0, start) + insertText + value.substring(end);
       onChange(newValue);
       
       // Move cursor after inserted symbol
       setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + symbol.length;
+        textarea.selectionStart = textarea.selectionEnd = start + insertText.length - cursorPositionAdjustment;
         textarea.focus();
       }, 0);
     }
     setShowMathPicker(false);
   };
+
+  // Handle Enter key press to insert $$
+const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      const insertText = ' $\\newline$ \n';
+      const newValue = 
+        value.substring(0, start) + 
+        insertText + 
+        value.substring(end);
+
+      onChange(newValue);
+
+      // Move cursor after the inserted text
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
+        textarea.focus();
+      }, 0);
+    }
+  }
+};
+
 
   return (
     <div style={{ position: 'relative' }}>
@@ -114,7 +238,8 @@ const MathTextArea: React.FC<{
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder || "Enter text. Use $...$ for math equations. Press Enter to add $$ at the start of a new line."}
           className={className}
           style={{ ...style, paddingRight: '50px' }}
           rows={rows}
@@ -139,6 +264,28 @@ const MathTextArea: React.FC<{
         </button>
       </div>
       
+      {/* Preview area */}
+      {value && (
+        <div 
+          ref={previewRef}
+          className="latex-preview"
+          style={{
+            marginTop: '8px',
+            padding: '8px',
+            background: '#f8f9fa',
+            borderRadius: '4px',
+            border: '1px solid #e9ecef',
+            color: '#374151',
+          }}
+        />
+      )}
+      
+      {error && (
+        <div style={{ color: '#dc2626', fontSize: '14px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
+      
       {showMathPicker && (
         <MathSymbolPicker
           onInsert={insertMathSymbol}
@@ -159,20 +306,122 @@ const MathInput: React.FC<{
 }> = ({ value, onChange, placeholder, className, style }) => {
   const [showMathPicker, setShowMathPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState('');
+
+  // Render mixed content (normal text + LaTeX)
+  useEffect(() => {
+    if (!previewRef.current) return;
+    
+    // Clear previous content
+    previewRef.current.innerHTML = '';
+    
+    if (!value.trim()) return;
+    
+    try {
+      // Create a temporary container
+      const container = document.createElement('div');
+      container.innerHTML = value;
+      
+      // Process all text nodes that contain LaTeX
+      const processNode = (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent || '';
+          const fragments = splitMixedContent(text);
+          
+          if (fragments.length > 1) {
+            const parent = node.parentNode;
+            fragments.forEach(fragment => {
+              if (fragment.type === 'text') {
+                parent?.insertBefore(document.createTextNode(fragment.content), node);
+              } else {
+                try {
+                  const span = document.createElement('span');
+                  span.innerHTML = katex.renderToString(fragment.content, {
+                    throwOnError: false,
+                    displayMode: false,
+                    output: 'html'
+                  });
+                  parent?.insertBefore(span, node);
+                } catch (err) {
+                  const error = err as katex.ParseError;
+                  console.error('LaTeX rendering error:', error);
+                  parent?.insertBefore(document.createTextNode(`$${fragment.content}$`), node);
+                }
+              }
+            });
+            parent?.removeChild(node);
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          Array.from(node.childNodes).forEach(processNode);
+        }
+      };
+      
+      // Process all nodes in the container
+      Array.from(container.childNodes).forEach(processNode);
+      
+      // Move processed content to preview
+      while (container.firstChild) {
+        previewRef.current.appendChild(container.firstChild);
+      }
+    } catch (err) {
+      const error = err as Error;
+      setError(`Error rendering content: ${error.message}`);
+    }
+  }, [value]);
+
+  // Split text into normal text and LaTeX fragments
+  const splitMixedContent = (text: string) => {
+    const fragments = [];
+    let currentIndex = 0;
+    const regex = /\$(.*?)\$/g;
+    
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      // Add text before the LaTeX
+      if (match.index > currentIndex) {
+        fragments.push({
+          type: 'text',
+          content: text.substring(currentIndex, match.index)
+        });
+      }
+      
+      // Add LaTeX content (without the $ delimiters)
+      fragments.push({
+        type: 'latex',
+        content: match[1]
+      });
+      
+      currentIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text after last LaTeX
+    if (currentIndex < text.length) {
+      fragments.push({
+        type: 'text',
+        content: text.substring(currentIndex)
+      });
+    }
+    
+    return fragments;
+  };
 
   const insertMathSymbol = (symbol: string, latex: string) => {
     if (inputRef.current) {
       const input = inputRef.current;
       const start = input.selectionStart || 0;
       const end = input.selectionEnd || 0;
-      console.log('Inserting symbol:', latex, 'at position:', start, end);
-      // Insert the symbol at cursor position
-      const newValue = value.substring(0, start) + symbol + value.substring(end);
+      
+      // Wrap LaTeX in $ delimiters
+      const wrappedLatex = `$${latex}$`;
+      
+      // Insert the wrapped LaTeX code at cursor position
+      const newValue = value.substring(0, start) + wrappedLatex + value.substring(end);
       onChange(newValue);
       
-      // Move cursor after inserted symbol
+      // Move cursor after inserted LaTeX
       setTimeout(() => {
-        input.selectionStart = input.selectionEnd = start + symbol.length;
+        input.selectionStart = input.selectionEnd = start + wrappedLatex.length;
         input.focus();
       }, 0);
     }
@@ -187,7 +436,7 @@ const MathInput: React.FC<{
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder || "Enter text. Use $...$ for math equations."}
           className={className}
           style={{ ...style, paddingRight: '50px' }}
         />
@@ -211,6 +460,28 @@ const MathInput: React.FC<{
           <Calculator size={16} />
         </button>
       </div>
+      
+      {/* Preview area */}
+      {value && (
+        <div 
+          ref={previewRef}
+          className="latex-preview"
+          style={{
+            marginTop: '8px',
+            padding: '8px',
+            background: '#f8f9fa',
+            borderRadius: '4px',
+            border: '1px solid #e9ecef',
+            color: '#374151',
+          }}
+        />
+      )}
+      
+      {error && (
+        <div style={{ color: '#dc2626', fontSize: '14px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
       
       {showMathPicker && (
         <MathSymbolPicker
@@ -533,7 +804,6 @@ const AssignmentCreator: React.FC = () => {
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('details');
-//  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<number | null>(null);
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -604,7 +874,7 @@ const AssignmentCreator: React.FC = () => {
         setIsLoading(true);
         setLoadError('');
 
-        const response = await fetch(API_BASE_URL+`/api/assignments/${assignmentId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -684,15 +954,6 @@ const AssignmentCreator: React.FC = () => {
     // Clear any previous save errors
     if (saveError) setSaveError('');
   }, [saveError]);
-
-  // const handleArrayChange = useCallback((field: keyof Assignment, value: string, checked: boolean): void => {
-  //   setAssignment(prev => ({
-  //     ...prev,
-  //     [field]: checked 
-  //       ? [...(prev[field] as string[]), value]
-  //       : (prev[field] as string[]).filter(item => item !== value)
-  //   }));
-  // }, []);
 
   // Save quiz function (updated for both create and edit)
   const saveQuiz = useCallback(async (publish: boolean = false) => {
@@ -813,8 +1074,8 @@ const AssignmentCreator: React.FC = () => {
 
       // Determine API endpoint and method
       const url = isEditing 
-        ? API_BASE_URL`/api/assignments/${assignmentId}`
-        : API_BASE_URL+`/api/assignments`;
+        ? `${API_BASE_URL}/api/assignments/${assignmentId}`
+        : `${API_BASE_URL}/api/assignments`;
       const method = isEditing ? 'PUT' : 'POST';
 
       // Make the API call
@@ -1039,14 +1300,7 @@ const AssignmentCreator: React.FC = () => {
         <div className="header">
           <div className="header-content">
             <div className="header-left">
-              <button 
-                onClick={() => navigate(`/teacher/courses/${courseId}`)}
-                className="btn btn-secondary"
-                style={{ marginRight: '1rem' }}
-              >
-                <ArrowLeft size={16} />
-                Back to Course
-              </button>
+        
               <div>
                 <h1 className="title">{assignment.title}</h1>
                 <div className="badges">
@@ -1136,305 +1390,308 @@ const AssignmentCreator: React.FC = () => {
             </nav>
           </div>
 
-          {activeTab === 'details' && (
-            <div className="grid grid-3">
-              {/* Main Content */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {/* Basic Information */}
-                <div className="card">
-                  <h2 className="card-header">Basic Information</h2>
-                  
-                  <div className="form-group">
-                    <label className="form-label">
-                      Quiz Title <span className="required">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={assignment.title}
-                      onChange={(e) => handleInputChange('title', e.target.value)}
-                      className="form-input"
-                      placeholder="Enter quiz title"
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">
-                      Quiz Description <span className="required">*</span>
-                    </label>
-                    <MathTextArea
-                      value={assignment.description}
-                      onChange={(value) => handleInputChange('description', value)}
-                      className="form-textarea"
-                      style={{ height: '120px' }}
-                      placeholder="Provide a detailed description of the quiz, including learning objectives, topics covered, and grading criteria..."
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Quiz Instructions</label>
-                    <MathTextArea
-                      value={assignment.quizInstructions}
-                      onChange={(value) => handleInputChange('quizInstructions', value)}
-                      className="form-textarea"
-                      style={{ height: '96px' }}
-                      placeholder="Enter specific instructions that students will see before taking the quiz (optional)..."
-                    />
-                    <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-                      These instructions will be displayed to students before they start the quiz
-                    </p>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Quiz Password (Optional)</label>
-                    <div style={{ position: 'relative' }}>
+          {/* Fixed the adjacent JSX elements error by wrapping in a div */}
+          <div>
+            {activeTab === 'details' && (
+              <div className="grid grid-3">
+                {/* Main Content */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {/* Basic Information */}
+                  <div className="card">
+                    <h2 className="card-header">Basic Information</h2>
+                    
+                    <div className="form-group">
+                      <label className="form-label">
+                        Quiz Title <span className="required">*</span>
+                      </label>
                       <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={assignment.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        type="text"
+                        value={assignment.title}
+                        onChange={(e) => handleInputChange('title', e.target.value)}
                         className="form-input"
-                        placeholder="Set a password to restrict access"
-                        style={{ paddingRight: '40px' }}
+                        placeholder="Enter quiz title"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="icon-btn"
-                        style={{ 
-                          position: 'absolute', 
-                          right: '8px', 
-                          top: '50%', 
-                          transform: 'translateY(-50%)',
-                          background: 'none',
-                          border: 'none'
-                        }}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
                     </div>
-                    <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
-                      Leave empty for open access. If set, students will need this password to access the quiz.
-                    </p>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        Quiz Description <span className="required">*</span>
+                      </label>
+                      <MathTextArea
+                        value={assignment.description}
+                        onChange={(value) => handleInputChange('description', value)}
+                        className="form-textarea"
+                        style={{ height: '120px' }}
+                        placeholder="Provide a detailed description of the quiz, including learning objectives, topics covered, and grading criteria..."
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Quiz Instructions</label>
+                      <MathTextArea
+                        value={assignment.quizInstructions}
+                        onChange={(value) => handleInputChange('quizInstructions', value)}
+                        className="form-textarea"
+                        style={{ height: '96px' }}
+                        placeholder="Enter specific instructions that students will see before taking the quiz (optional)..."
+                      />
+                      <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+                        These instructions will be displayed to students before they start the quiz
+                      </p>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Quiz Password (Optional)</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={assignment.password}
+                          onChange={(e) => handleInputChange('password', e.target.value)}
+                          className="form-input"
+                          placeholder="Set a password to restrict access"
+                          style={{ paddingRight: '40px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="icon-btn"
+                          style={{ 
+                            position: 'absolute', 
+                            right: '8px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none'
+                          }}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+                        Leave empty for open access. If set, students will need this password to access the quiz.
+                      </p>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Due Date</label>
+                      <input
+                        type="datetime-local"
+                        value={assignment.dueDate}
+                        onChange={(e) => handleInputChange('dueDate', e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Available From</label>
+                      <input
+                        type="datetime-local"
+                        value={assignment.availableFrom}
+                        onChange={(e) => handleInputChange('availableFrom', e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Available Until</label>
+                      <input
+                        type="datetime-local"
+                        value={assignment.availableUntil}
+                        onChange={(e) => handleInputChange('availableUntil', e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">Due Date</label>
-                    <input
-                      type="datetime-local"
-                      value={assignment.dueDate}
-                      onChange={(e) => handleInputChange('dueDate', e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
+                  {/* Quiz Settings */}
+                  <div className="card">
+                    <h3 className="card-header">Quiz Settings</h3>
+                    
+                    <div className="form-group">
+                      <label className="form-label">Time Limit</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="checkbox"
+                            checked={assignment.hasTimeLimit}
+                            onChange={(e) => handleInputChange('hasTimeLimit', e.target.checked)}
+                            className="checkbox"
+                          />
+                          Enable time limit
+                        </label>
+                        {assignment.hasTimeLimit && (
+                          <input
+                            type="number"
+                            value={assignment.timeLimit}
+                            onChange={(e) => handleInputChange('timeLimit', e.target.value)}
+                            placeholder="Minutes"
+                            className="form-input"
+                            style={{ width: '100px' }}
+                          />
+                        )}
+                      </div>
+                    </div>
 
-                  <div className="form-group">
-                    <label className="form-label">Available From</label>
-                    <input
-                      type="datetime-local"
-                      value={assignment.availableFrom}
-                      onChange={(e) => handleInputChange('availableFrom', e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
+                    <div className="form-group">
+                      <label className="form-label">Attempts</label>
+                      <select
+                        value={assignment.allowedAttempts}
+                        onChange={(e) => handleInputChange('allowedAttempts', parseInt(e.target.value))}
+                        className="form-select"
+                      >
+                        <option value={1}>1 attempt</option>
+                        <option value={2}>2 attempts</option>
+                        <option value={3}>3 attempts</option>
+                        <option value={-1}>Unlimited attempts</option>
+                      </select>
+                    </div>
 
-                  <div className="form-group">
-                    <label className="form-label">Available Until</label>
-                    <input
-                      type="datetime-local"
-                      value={assignment.availableUntil}
-                      onChange={(e) => handleInputChange('availableUntil', e.target.value)}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-
-                {/* Quiz Settings */}
-                <div className="card">
-                  <h3 className="card-header">Quiz Settings</h3>
-                  
-                  <div className="form-group">
-                    <label className="form-label">Time Limit</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="checkbox-group">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1b1c1dff' }}>
                         <input
                           type="checkbox"
-                          checked={assignment.hasTimeLimit}
-                          onChange={(e) => handleInputChange('hasTimeLimit', e.target.checked)}
+                          checked={assignment.shuffleAnswers}
+                          onChange={(e) => handleInputChange('shuffleAnswers', e.target.checked)}
                           className="checkbox"
                         />
-                        Enable time limit
+                        Shuffle answer choices
                       </label>
-                      {assignment.hasTimeLimit && (
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1b1c1dff' }}>
                         <input
-                          type="number"
-                          value={assignment.timeLimit}
-                          onChange={(e) => handleInputChange('timeLimit', e.target.value)}
-                          placeholder="Minutes"
-                          className="form-input"
-                          style={{ width: '100px' }}
+                          type="checkbox"
+                          checked={assignment.showCorrectAnswers}
+                          onChange={(e) => handleInputChange('showCorrectAnswers', e.target.checked)}
+                          className="checkbox"
                         />
+                        Show correct answers after submission
+                      </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1b1c1dff' }}>
+                        <input
+                          type="checkbox"
+                          checked={assignment.oneQuestionAtTime}
+                          onChange={(e) => handleInputChange('oneQuestionAtTime', e.target.checked)}
+                          className="checkbox"
+                        />
+                        Show one question at a time
+                      </label>
+
+                      {assignment.oneQuestionAtTime && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '24px', color: '#1b1c1dff' }}>
+                          <input
+                            type="checkbox"
+                            checked={assignment.cantGoBack}
+                            onChange={(e) => handleInputChange('cantGoBack', e.target.checked)}
+                            className="checkbox"
+                          />
+                          Lock questions after answering
+                        </label>
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
 
-                  <div className="form-group">
-                    <label className="form-label">Attempts</label>
-                    <select
-                      value={assignment.allowedAttempts}
-                      onChange={(e) => handleInputChange('allowedAttempts', parseInt(e.target.value))}
-                      className="form-select"
+            {activeTab === 'questions' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Questions Header */}
+                <div className="card">
+                  <div className="questions-header">
+                    <div>
+                      <h2 className="card-header" style={{ margin: 0 }}>Questions</h2>
+                      <p className="questions-info">
+                        {questions.length} questions, {totalPoints} points total
+                      </p>
+                    </div>
+                    <button
+                      onClick={addQuestion}
+                      className="btn btn-primary"
+                      type="button"
                     >
-                      <option value={1}>1 attempt</option>
-                      <option value={2}>2 attempts</option>
-                      <option value={3}>3 attempts</option>
-                      <option value={-1}>Unlimited attempts</option>
-                    </select>
-                  </div>
-
-                  <div className="checkbox-group">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1b1c1dff' }}>
-                      <input
-                        type="checkbox"
-                        checked={assignment.shuffleAnswers}
-                        onChange={(e) => handleInputChange('shuffleAnswers', e.target.checked)}
-                        className="checkbox"
-                      />
-                      Shuffle answer choices
-                    </label>
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1b1c1dff' }}>
-                      <input
-                        type="checkbox"
-                        checked={assignment.showCorrectAnswers}
-                        onChange={(e) => handleInputChange('showCorrectAnswers', e.target.checked)}
-                        className="checkbox"
-                      />
-                      Show correct answers after submission
-                    </label>
-
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1b1c1dff' }}>
-                      <input
-                        type="checkbox"
-                        checked={assignment.oneQuestionAtTime}
-                        onChange={(e) => handleInputChange('oneQuestionAtTime', e.target.checked)}
-                        className="checkbox"
-                      />
-                      Show one question at a time
-                    </label>
-
-                    {assignment.oneQuestionAtTime && (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '24px', color: '#1b1c1dff' }}>
-                        <input
-                          type="checkbox"
-                          checked={assignment.cantGoBack}
-                          onChange={(e) => handleInputChange('cantGoBack', e.target.checked)}
-                          className="checkbox"
-                        />
-                        Lock questions after answering
-                      </label>
-                    )}
+                      <Plus size={16} />
+                      New Question
+                    </button>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {activeTab === 'questions' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {/* Questions Header */}
-              <div className="card">
-                <div className="questions-header">
-                  <div>
-                    <h2 className="card-header" style={{ margin: 0 }}>Questions</h2>
-                    <p className="questions-info">
-                      {questions.length} questions, {totalPoints} points total
-                    </p>
+                {/* Questions List */}
+                {questions.length === 0 ? (
+                  <div className="card empty-state">
+                    <div className="empty-icon">
+                      <HelpCircle size={48} />
+                    </div>
+                    <h3 className="empty-title">No questions yet</h3>
+                    <p className="empty-description">Get started by adding your first question.</p>
+                    <button
+                      onClick={addQuestion}
+                      className="btn btn-primary"
+                      type="button"
+                    >
+                      Add Your First Question
+                    </button>
                   </div>
-                  <button
-                    onClick={addQuestion}
-                    className="btn btn-primary"
-                    type="button"
-                  >
-                    <Plus size={16} />
-                    New Question
-                  </button>
-                </div>
-              </div>
-
-              {/* Questions List */}
-              {questions.length === 0 ? (
-                <div className="card empty-state">
-                  <div className="empty-icon">
-                    <HelpCircle size={48} />
-                  </div>
-                  <h3 className="empty-title">No questions yet</h3>
-                  <p className="empty-description">Get started by adding your first question.</p>
-                  <button
-                    onClick={addQuestion}
-                    className="btn btn-primary"
-                    type="button"
-                  >
-                    Add Your First Question
-                  </button>
-                </div>
-              ) : (
-                <div className="question-list">
-                  {questions.map((question) => {
-                    if (editingQuestion === question.id) {
-                      return (
-                        <QuestionEditor
-                          key={question.id}
-                          question={question}
-                          onUpdateQuestion={(updates) => updateQuestion(question.id, updates)}
-                          onDeleteQuestion={() => deleteQuestion(question.id)}
-                          onAddAnswer={() => addAnswer(question.id)}
-                          onUpdateAnswer={(answerId, field, value) => updateAnswer(question.id, answerId, field, value)}
-                          onDeleteAnswer={(answerId) => deleteAnswer(question.id, answerId)}
-                          onSetCorrectAnswer={(answerId) => setCorrectAnswer(question.id, answerId)}
-                          onImageUpload={(event) => handleImageUpload(question.id, event)}
-                          onRemoveImage={() => removeImage(question.id)}
-                        />
-                      );
-                    } else {
-                      return (
-                        <div key={question.id} className="question-item card">
-                          <div className="question-header">
-                            <div className="question-content">
-                              <h3 className="question-title">{question.title}</h3>
-                              <p className="question-meta">
-                                {question.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} • {question.points} pts
-                              </p>
-                              {question.text && (
-                                <p className="question-text">{question.text}</p>
-                              )}
-                              {question.imageUrl && (
-                                <img src={question.imageUrl} alt="Question thumbnail" className="question-thumbnail" />
-                              )}
-                            </div>
-                            <div className="question-actions">
-                              <button
-                                onClick={() => setEditingQuestion(question.id)}
-                                className="icon-btn"
-                                type="button"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => deleteQuestion(question.id)}
-                                className="icon-btn danger"
-                                type="button"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                ) : (
+                  <div className="question-list">
+                    {questions.map((question) => {
+                      if (editingQuestion === question.id) {
+                        return (
+                          <QuestionEditor
+                            key={question.id}
+                            question={question}
+                            onUpdateQuestion={(updates) => updateQuestion(question.id, updates)}
+                            onDeleteQuestion={() => deleteQuestion(question.id)}
+                            onAddAnswer={() => addAnswer(question.id)}
+                            onUpdateAnswer={(answerId, field, value) => updateAnswer(question.id, answerId, field, value)}
+                            onDeleteAnswer={(answerId) => deleteAnswer(question.id, answerId)}
+                            onSetCorrectAnswer={(answerId) => setCorrectAnswer(question.id, answerId)}
+                            onImageUpload={(event) => handleImageUpload(question.id, event)}
+                            onRemoveImage={() => removeImage(question.id)}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div key={question.id} className="question-item card">
+                            <div className="question-header">
+                              <div className="question-content">
+                                <h3 className="question-title">{question.title}</h3>
+                                <p className="question-meta">
+                                  {question.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} • {question.points} pts
+                                </p>
+                                {question.text && (
+                                  <p className="question-text">{question.text}</p>
+                                )}
+                                {question.imageUrl && (
+                                  <img src={question.imageUrl} alt="Question thumbnail" className="question-thumbnail" />
+                                )}
+                              </div>
+                              <div className="question-actions">
+                                <button
+                                  onClick={() => setEditingQuestion(question.id)}
+                                  className="icon-btn"
+                                  type="button"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={() => deleteQuestion(question.id)}
+                                  className="icon-btn danger"
+                                  type="button"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    }
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                        );
+                      }
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Bottom Actions */}
           <div className="bottom-actions">

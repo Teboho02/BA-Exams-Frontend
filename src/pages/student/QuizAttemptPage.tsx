@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   CheckCircle, 
   AlertCircle, 
@@ -13,8 +12,11 @@ import {
   HelpCircle,
   FileText
 } from 'lucide-react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import './StudentQuizView.css';
- const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Updated types to match your API
 interface Assignment {
@@ -80,11 +82,69 @@ interface QuizState {
   attemptNumber: number;
 }
 
-const QuizAttemptPage: React.FC = () => {
-//  const { assignmentId } = useParams<{ assignmentId: string }>();
-  const { assignmentId } = useParams<{ assignmentId: string }>();
-  
+// Enhanced LaTeX Renderer Component with token-based parsing
+const LatexRenderer: React.FC<{ 
+  content: string; 
+  className?: string; 
+  style?: React.CSSProperties;
+}> = ({ content, className, style }) => {
+  const [tokens, setTokens] = useState<React.ReactNode[]>([]);
 
+  useEffect(() => {
+    if (!content.trim()) {
+      setTokens([]);
+      return;
+    }
+
+    // Regular expression to match $$...$$ and $...$ (non-greedy)
+    const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+    const rawTokens = content.split(regex).filter(token => token !== '');
+
+    const tokenNodes = rawTokens.map((token, index) => {
+      // Check for display math: $$...$$
+      if (token.startsWith('$$') && token.endsWith('$$')) {
+        const latexContent = token.substring(2, token.length - 2);
+        try {
+          const html = katex.renderToString(latexContent, { 
+            displayMode: true, 
+            throwOnError: false 
+          });
+          return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />;
+        } catch (err) {
+          return <span key={index} style={{ color: '#ef4444' }}>{token}</span>;
+        }
+      } 
+      // Check for inline math: $...$
+      else if (token.startsWith('$') && token.endsWith('$')) {
+        const latexContent = token.substring(1, token.length - 1);
+        try {
+          const html = katex.renderToString(latexContent, { 
+            displayMode: false, 
+            throwOnError: false 
+          });
+          return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />;
+        } catch (err) {
+          return <span key={index} style={{ color: '#ef4444' }}>{token}</span>;
+        }
+      } 
+      // Plain text
+      else {
+        return <React.Fragment key={index}>{token}</React.Fragment>;
+      }
+    });
+
+    setTokens(tokenNodes);
+  }, [content]);
+
+  return (
+    <span className={`latex-renderer ${className || ''}`} style={style}>
+      {tokens}
+    </span>
+  );
+};
+
+const QuizAttemptPage: React.FC = () => {
+  const { assignmentId } = useParams<{ assignmentId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -308,7 +368,7 @@ const QuizAttemptPage: React.FC = () => {
         
         // Navigate to results after a short delay
         setTimeout(() => {
-          navigate(`/quiz/results/${data.submission.id}`, {
+          navigate(`/student/quiz/review/${data.submission.id}`, {
             state: {
               submission: data.submission,
               showCorrectAnswers: data.showCorrectAnswers
@@ -662,9 +722,9 @@ const QuizAttemptPage: React.FC = () => {
 
             {/* Question Text */}
             <div className="form-group" style={{ marginBottom: '32px' }}>
-              <p style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.6', color: '#374151', margin: 0 }}>
-                {currentQ.questionText}
-              </p>
+              <div style={{ fontSize: '18px', fontWeight: '500', lineHeight: '1.6', color: '#374151' }}>
+                <LatexRenderer content={currentQ.questionText} />
+              </div>
             </div>
 
             {/* Question Image */}
@@ -711,13 +771,13 @@ const QuizAttemptPage: React.FC = () => {
                         onChange={() => updateAnswer(currentQ.id, answer.id)}
                         style={{ marginRight: currentQ.questionType === 'true_false' ? '8px' : '12px' }}
                       />
-                      <span style={{ 
+                      <div style={{ 
                         fontSize: '16px', 
                         color: '#374151',
                         fontWeight: currentQ.questionType === 'true_false' ? '500' : 'normal'
                       }}>
-                        {answer.answerText}
-                      </span>
+                        <LatexRenderer content={answer.answerText} />
+                      </div>
                     </label>
                   ))}
                 </div>
@@ -1080,4 +1140,4 @@ const QuizAttemptPage: React.FC = () => {
   );
 };
 
-export default QuizAttemptPage;
+export default QuizAttemptPage; 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import './TeacherQuizReviewPage.css';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface Answer {
@@ -141,36 +142,51 @@ const TeacherQuizReviewPage: React.FC = () => {
     const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
     const [filterStatus, setFilterStatus] = useState<'all' | 'submitted' | 'not_submitted'>('all');
     const [sortBy, setSortBy] = useState<'name' | 'score' | 'submission_date'>('name');
+    const [searchQuery, setSearchQuery] = useState('');
 
-useEffect(() => {
-    const fetchQuizData = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch(API_BASE_URL+`/api/teacher-review/${quizId}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+    useEffect(() => {
+        const fetchQuizData = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(API_BASE_URL+`/api/teacher-review/${quizId}`, {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
 
-            const result = await response.json();
-            setData(result);
-            console.log(result); // Use `result` not `data` (data isn't updated immediately)
-        } catch (error) {
-            console.error('Error fetching quiz data:', error);
-            // For demo purposes, use the provided mock data
-        } finally {
-            setLoading(false);
+                const result = await response.json();
+                setData(result);
+            } catch (error) {
+                console.error('Error fetching quiz data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (quizId) {
+            fetchQuizData();
         }
-    };
+    }, [quizId]);
 
-    if (quizId) {
-        fetchQuizData();
+    useEffect(() => {
+    if (selectedStudent) {
+        // Lock body scroll when modal is open
+        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
+    } else {
+        // Restore body scroll when modal is closed
+        document.body.style.overflow = 'unset';
+        document.body.classList.remove('modal-open');
     }
-}, [quizId]);
 
-
+    // Cleanup on component unmount
+    return () => {
+        document.body.style.overflow = 'unset';
+        document.body.classList.remove('modal-open');
+    };
+}, [selectedStudent]);
 
     const getLetterGradeColor = (grade: string) => {
         switch (grade) {
@@ -188,8 +204,11 @@ useEffect(() => {
     };
 
     const filteredStudents = data?.studentReviews.filter(review => {
-        if (filterStatus === 'all') return true;
-        return review.status === filterStatus;
+        const matchesStatus = filterStatus === 'all' || review.status === filterStatus;
+        const matchesSearch = 
+            review.student.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            review.student.email.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesSearch;
     }) || [];
 
     const sortedStudents = [...filteredStudents].sort((a, b) => {
@@ -213,6 +232,10 @@ useEffect(() => {
     const selectedStudentData = selectedStudent
         ? data?.studentReviews.find(review => review.student.id === selectedStudent)
         : null;
+
+    const closeModal = () => {
+        setSelectedStudent(null);
+    };
 
     if (loading) {
         return (
@@ -295,6 +318,17 @@ useEffect(() => {
                 {/* Filters and Controls */}
                 <div className="controls-section">
                     <div className="filters">
+                        <div className="search-bar">
+                            <input
+                                type="text"
+                                placeholder="Search students..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="search-input"
+                            />
+                            <span className="search-icon">🔍</span>
+                        </div>
+                        
                         <select
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value as any)}
@@ -331,9 +365,7 @@ useEffect(() => {
                             <div
                                 key={review.student.id}
                                 className={`student-card ${selectedStudent === review.student.id ? 'selected' : ''}`}
-                                onClick={() => setSelectedStudent(
-                                    selectedStudent === review.student.id ? null : review.student.id
-                                )}
+                                onClick={() => setSelectedStudent(review.student.id)}
                             >
                                 <div className="student-info">
                                     <div className="student-avatar">
@@ -381,89 +413,109 @@ useEffect(() => {
                             </div>
                         ))}
                     </div>
-                </div>
 
-                {/* Student Detail View */}
+
+                        </div>
+
+
+                    {selectedStudentData && (
+    <div className="modal-overlay open" onClick={closeModal}>
+        <div className="student-detail-modal" onClick={e => e.stopPropagation()}>
+            {/* rest of your modal content */}
+        </div>
+    </div>
+)}
+
+
+                {/* Modal for Student Detail */}
                 {selectedStudentData && (
-                    <div className="student-detail-section">
-                        <h2>Detailed Review - {selectedStudentData.student.name || selectedStudentData.student.email}</h2>
-
-                        {selectedStudentData.submission ? (
-                            <div className="submission-details">
-                                <div className="submission-header">
-                                    <div className="submission-meta">
-                                        <span>Attempt {selectedStudentData.submission.attemptNumber} of {selectedStudentData.submission.totalAttempts}</span>
-                                        <span>Time Spent: {selectedStudentData.submission.timeSpentMinutes} minutes</span>
-                                        <span>Submitted: {formatDateTime(selectedStudentData.submission.submittedAt)}</span>
-                                    </div>
-
-                                    {selectedStudentData.submission.feedback && (
-                                        <div className="teacher-feedback">
-                                            <h4>Teacher Feedback:</h4>
-                                            <p>{selectedStudentData.submission.feedback}</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="answers-review">
-                                    <h3>Question Breakdown</h3>
-                                    {data.questions.map((question) => {
-                                        const studentAnswer = selectedStudentData.answers?.[question.id];
-                                        if (!studentAnswer) return null;
-
-                                        return (
-                                            <div key={question.id} className="question-review">
-                                                <div className="question-header">
-                                                    <span className="question-number">Question {question.questionNumber}</span>
-                                                    <span className="question-points">
-                                                        {studentAnswer.pointsEarned}/{question.points} points
-                                                    </span>
-                                                    <span className={`correctness ${studentAnswer.isCorrect ? 'correct' : 'incorrect'}`}>
-                                                        {studentAnswer.isCorrect ? '✓ Correct' : '✗ Incorrect'}
-                                                    </span>
-                                                </div>
-
-                                                <div className="question-content">
-                                                    <p className="question-text">{question.questionText}</p>
-
-                                                    <div className="answer-comparison">
-                                                        <div className="student-answer">
-                                                            <h5>Student Answer:</h5>
-                                                            <p>{studentAnswer.studentAnswerText}</p>
-                                                        </div>
-
-                                                        {question.questionType !== 'short_answer' && (
-                                                            <div className="correct-answer">
-                                                                <h5>Correct Answer:</h5>
-                                                                <p>{studentAnswer.correctAnswerText}</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {studentAnswer.feedback && (
-                                                        <div className="answer-feedback">
-                                                            <h5>Feedback:</h5>
-                                                            <p>{studentAnswer.feedback}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
+                    <div className="modal-overlay" onClick={closeModal}>
+                        <div className="student-detail-modal" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h2>
+                                    Detailed Review - {selectedStudentData.student.name || selectedStudentData.student.email}
+                                    <span className="close-modal" onClick={closeModal}>&times;</span>
+                                </h2>
+                            </div>
+                            
+                            <div className="modal-content">
+                                {selectedStudentData.submission ? (
+                                    <div className="submission-details">
+                                        <div className="submission-header">
+                                            <div className="submission-meta">
+                                                <span>Attempt {selectedStudentData.submission.attemptNumber} of {selectedStudentData.submission.totalAttempts}</span>
+                                                <span>Time Spent: {selectedStudentData.submission.timeSpentMinutes} minutes</span>
+                                                <span>Submitted: {formatDateTime(selectedStudentData.submission.submittedAt)}</span>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+
+                                            {selectedStudentData.submission.feedback && (
+                                                <div className="teacher-feedback">
+                                                    <h4>Teacher Feedback:</h4>
+                                                    <p>{selectedStudentData.submission.feedback}</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="answers-review">
+                                            <h3>Question Breakdown</h3>
+                                            {data.questions.map((question) => {
+                                                const studentAnswer = selectedStudentData.answers?.[question.id];
+                                                if (!studentAnswer) return null;
+
+                                                return (
+                                                    <div key={question.id} className="question-review">
+                                                        <div className="question-header">
+                                                            <span className="question-number">Question {question.questionNumber}</span>
+                                                            <span className="question-points">
+                                                                {studentAnswer.pointsEarned}/{question.points} points
+                                                            </span>
+                                                            <span className={`correctness ${studentAnswer.isCorrect ? 'correct' : 'incorrect'}`}>
+                                                                {studentAnswer.isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="question-content">
+                                                            <p className="question-text">{question.questionText}</p>
+
+                                                            <div className="answer-comparison">
+                                                                <div className="student-answer">
+                                                                    <h5>Student Answer:</h5>
+                                                                    <p>{studentAnswer.studentAnswerText}</p>
+                                                                </div>
+
+                                                                {question.questionType !== 'short_answer' && (
+                                                                    <div className="correct-answer">
+                                                                        <h5>Correct Answer:</h5>
+                                                                        <p>{studentAnswer.correctAnswerText}</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {studentAnswer.feedback && (
+                                                                <div className="answer-feedback">
+                                                                    <h5>Feedback:</h5>
+                                                                    <p>{studentAnswer.feedback}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="no-submission">
+                                        <p>This student has not submitted the quiz yet.</p>
+                                        <button className="remind-btn">Send Reminder Email</button>
+                                    </div>
+                                )}
                             </div>
-                        ) : (
-                            <div className="no-submission">
-                                <p>This student has not submitted the quiz yet.</p>
-                                <button className="remind-btn">Send Reminder Email</button>
-                            </div>
-                        )}
+                        </div>
                     </div>
                 )}
             </div>
         </Layout>
     );
 };
-
 
 export default TeacherQuizReviewPage;
