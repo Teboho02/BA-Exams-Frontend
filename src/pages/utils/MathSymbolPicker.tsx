@@ -385,39 +385,43 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
     position: 'relative' as const,
     display: 'inline-flex',
     alignItems: 'center',
-    margin: '2px',
-    padding: '4px',
-    border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e5e5',
-    borderRadius: '4px',
+    margin: '4px',
+    padding: '8px',
+    border: isSelected ? '3px solid #3b82f6' : '2px solid #e5e5e5',
+    borderRadius: '6px',
     background: isEditingContext ? '#e0f2fe' : 'white',
-    boxShadow: isSelected ? '0 0 0 2px rgba(59, 130, 246, 0.2)' : 'none',
+    boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.2)' : 'none',
+    minWidth: '60px',
+    minHeight: '50px',
   });
 
   const removeButtonBaseStyle = (visible: boolean) => ({
     position: 'absolute' as const,
-    top: '-8px',
-    right: '-8px',
-    width: '16px',
-    height: '16px',
+    top: '-10px',
+    right: '-10px',
+    width: '20px',
+    height: '20px',
     borderRadius: '50%',
     background: '#ef4444',
     color: 'white',
     border: 'none',
-    fontSize: '10px',
+    fontSize: '12px',
     lineHeight: '1',
     cursor: 'pointer',
     display: visible ? 'block' : 'none',
+    fontWeight: 'bold',
   });
 
   const contextButtonStyle = {
-    padding: '2px 4px',
-    fontSize: '10px',
-    margin: '1px',
+    padding: '4px 8px',
+    fontSize: '12px',
+    margin: '2px',
     background: '#dbeafe',
     border: '1px solid #93c5fd',
-    borderRadius: '3px',
+    borderRadius: '4px',
     cursor: 'pointer',
     color: '#1e40af',
+    fontWeight: 'bold',
   } as const;
 
   const renderNode = (node: ExpressionNode): React.ReactNode => {
@@ -444,10 +448,12 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                 border: 'none',
                 outline: 'none',
                 background: 'transparent',
-                minWidth: '30px',
-                width: `${Math.max(30, (node.content || '').length * 8 + 10)}px`,
-                fontSize: '14px',
+                minWidth: '60px',
+                width: `${Math.max(60, (node.content || '').length * 10 + 20)}px`,
+                fontSize: '16px',
                 color: 'black',
+                textAlign: 'center',
+                padding: '4px',
               }}
             />
             <button
@@ -468,8 +474,19 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', minWidth: '40px', minHeight: '25px', padding: '2px 4px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 8px' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                minWidth: '80px', 
+                minHeight: '40px', 
+                padding: '4px 8px', 
+                justifyContent: 'center',
+                background: '#f8f9fa',
+                border: '1px solid #dee2e6',
+                borderRadius: '4px',
+                marginBottom: '4px'
+              }}>
                 {(node.numerator || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -479,8 +496,19 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   +
                 </button>
               </div>
-              <div style={{ width: '100%', minWidth: '40px', height: '2px', background: '#000', margin: '1px 0' }}></div>
-              <div style={{ display: 'flex', alignItems: 'center', minWidth: '40px', minHeight: '25px', padding: '2px 4px', justifyContent: 'center' }}>
+              <div style={{ width: '100%', minWidth: '80px', height: '3px', background: '#000', margin: '2px 0' }}></div>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                minWidth: '80px', 
+                minHeight: '40px', 
+                padding: '4px 8px', 
+                justifyContent: 'center',
+                background: '#f8f9fa',
+                border: '1px solid #dee2e6',
+                borderRadius: '4px',
+                marginTop: '4px'
+              }}>
                 {(node.denominator || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -509,16 +537,21 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', alignItems: 'center', margin: '0 4px' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', marginRight: '2px', color: 'black', lineHeight: '1' }}>√</div>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '0 8px' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', marginRight: '4px', color: 'black', lineHeight: '1' }}>√</div>
               <div
                 style={{
-                  borderTop: '2px solid #000',
-                  padding: '2px 4px 0 4px',
-                  minWidth: '30px',
-                  minHeight: '25px',
+                  borderTop: '3px solid #000',
+                  padding: '8px 12px 4px 12px',
+                  minWidth: '60px',
+                  minHeight: '40px',
                   display: 'flex',
                   alignItems: 'center',
+                  background: '#f8f9fa',
+                  borderLeft: '1px solid #dee2e6',
+                  borderRight: '1px solid #dee2e6',
+                  borderBottom: '1px solid #dee2e6',
+                  borderRadius: '0 0 4px 4px',
                 }}
               >
                 {(node.radicand || []).map((n) => renderNode(n))}
@@ -549,8 +582,19 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', minHeight: '15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '0 8px' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: '14px', 
+                minHeight: '30px',
+                minWidth: '60px',
+                padding: '4px 8px',
+                background: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '4px',
+                marginBottom: '4px'
+              }}>
                 {(node.exponent || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -560,7 +604,17 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   +
                 </button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px', minHeight: '20px' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: '16px', 
+                minHeight: '35px',
+                minWidth: '60px',
+                padding: '4px 8px',
+                background: '#f8f9fa',
+                border: '1px solid #dee2e6',
+                borderRadius: '4px'
+              }}>
                 {(node.base || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -589,8 +643,19 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px', minHeight: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '0 8px' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: '16px', 
+                minHeight: '35px',
+                minWidth: '60px',
+                padding: '4px 8px',
+                background: '#f8f9fa',
+                border: '1px solid #dee2e6',
+                borderRadius: '4px',
+                marginBottom: '4px'
+              }}>
                 {(node.base || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -600,7 +665,17 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   +
                 </button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', minHeight: '15px' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: '14px', 
+                minHeight: '30px',
+                minWidth: '60px',
+                padding: '4px 8px',
+                background: '#e3f2fd',
+                border: '1px solid #90caf9',
+                borderRadius: '4px'
+              }}>
                 {(node.index || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -629,9 +704,20 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', alignItems: 'center', margin: '0 4px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', fontSize: '10px', marginBottom: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '0 8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '12px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  fontSize: '12px', 
+                  marginBottom: '4px',
+                  minWidth: '60px',
+                  minHeight: '25px',
+                  padding: '4px 8px',
+                  background: '#fff3cd',
+                  border: '1px solid #ffeaa7',
+                  borderRadius: '4px'
+                }}>
                   {(node.upperLimit || []).map((n) => renderNode(n))}
                   <button
                     style={contextButtonStyle}
@@ -641,8 +727,19 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                     +
                   </button>
                 </div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'black', lineHeight: '1' }}>Σ</div>
-                <div style={{ display: 'flex', alignItems: 'center', fontSize: '10px', marginTop: '2px' }}>
+                <div style={{ fontSize: '36px', fontWeight: 'bold', color: 'black', lineHeight: '1', margin: '4px 0' }}>Σ</div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  fontSize: '12px', 
+                  marginTop: '4px',
+                  minWidth: '60px',
+                  minHeight: '25px',
+                  padding: '4px 8px',
+                  background: '#e3f2fd',
+                  border: '1px solid #90caf9',
+                  borderRadius: '4px'
+                }}>
                   {(node.lowerLimit || []).map((n) => renderNode(n))}
                   <button
                     style={contextButtonStyle}
@@ -653,7 +750,16 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                minWidth: '80px',
+                minHeight: '40px',
+                padding: '8px 12px',
+                background: '#f8f9fa',
+                border: '1px solid #dee2e6',
+                borderRadius: '4px'
+              }}>
                 {(node.integrand || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -1148,18 +1254,18 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                 </label>
                 <div
                   style={{
-                    minHeight: '120px',
+                    minHeight: '200px',
                     border: '2px dashed #d1d5db',
                     borderRadius: '8px',
                     padding: '20px',
                     backgroundColor: '#f9f9f9',
                   }}
                 >
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
                     {expression.length > 0 ? (
                       expression.map((node) => renderNode(node))
                     ) : (
-                      <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', width: '100%', padding: '20px' }}>
+                      <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', width: '100%', padding: '40px' }}>
                         Click buttons above to start building your equation...
                         <br />
                         <small style={{ color: '#999' }}>Try the quick symbols (like ±) or the "Quadratic Formula" template!</small>
@@ -1254,7 +1360,7 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
           }}
         >
           <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
-            {mode === 'visual' && 'Build equations by clicking components. Quick symbols include ± and other common math symbols.'}
+            {mode === 'visual' && 'Build equations by clicking components. Click + buttons to add to specific parts.'}
             {mode === 'symbols' && 'Click symbols to insert them at cursor position.'}
             {mode === 'custom' && 'Type LaTeX expressions. Use \\ for commands like \\frac, \\sqrt, etc.'}
           </p>
@@ -1304,6 +1410,5 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
     </div>
   );
 };
-
 
 export default MathSymbolPicker;
