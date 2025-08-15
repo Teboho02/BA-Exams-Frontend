@@ -10,7 +10,7 @@ import {
     StudentDetailModal
 } from './components';
 import type { QuizReviewData, StudentAnswer } from './types/TeacherQuizReviewTypes';
-import type { GradeUpdateRequest, GradeUpdateResponse } from  './types/ManualGradingExtensions';
+// import type { GradeUpdateRequest, GradeUpdateResponse } from  './types/ManualGradingExtensions';
 import './TeacherQuizReviewPage.css';
     
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;

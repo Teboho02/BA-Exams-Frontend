@@ -1,6 +1,6 @@
 // components/StudentDetailModal.tsx
 import React, { useState } from 'react';
-import type { StudentReview, Question, Assignment, StudentAnswer } from '../types/TeacherQuizReviewTypes';
+import type { StudentReview, Question, Assignment } from '../types/TeacherQuizReviewTypes';
 import { renderTextWithLatex } from '../utils/renderTextWithLatex';
 import { formatDateTime } from '../utils/helpers';
 import QuestionReview from './QuestionReview';
@@ -171,6 +171,8 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         
         return !answer.isGraded;
     };
+
+    console.log(needsGrading);
 
     // Get the current points for a question (either from grading state or answer data)
     const getCurrentPoints = (questionId: string, questionType: string) => {

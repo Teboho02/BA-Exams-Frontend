@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import './StudentQuizView.css';
-import MathSymbolPicker from '../../utils/MathSymbolPicker';
+//import MathSymbolPicker from '../../utils/MathSymbolPicker';
 // Import components
 import QuizInstructions from './QuizInstructions';
 import QuizCompletion from './QuizCompletion';
