@@ -348,6 +348,26 @@ const handleAssignmentClick = (assignment: Assignment) => {
                               e.stopPropagation();
                               // Handle publish action
                               console.log('Publishing assignment:', assignment.id);
+                              fetch(`${API_BASE_URL}/api/assignments/${assignment.id}/publish`, {
+                                method: 'PATCH',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${getAuthToken()}`
+                                }
+                              })
+                                .then(res => res.json())
+                                .then(data => {
+                                  if (data.success) {
+                                    setAssignments(prev => 
+                                      prev.map(a => a.id === assignment.id ? { ...a, is_published: true } : a)
+                                    );
+                                  } else {
+                                    alert('Failed to publish assignment');
+                                  }
+                                })
+                                .catch(err => console.error('Error publishing assignment:', err));
+
+                              
                             }}
                           >
                             📤 Publish

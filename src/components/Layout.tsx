@@ -105,7 +105,7 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
               fill="none" stroke="currentColor" strokeWidth="2"
               strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
+            </svg>  
           </button>
           <Link to="/" className="nav-brand">
             <span className="brand-full">Bethunana Academy Online Examinations</span>
