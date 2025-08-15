@@ -18,9 +18,15 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   const questionId = question.id;
   const studentAnswer = quizDetails.answers[questionId];
   const detailedResult = quizDetails.detailedResults[questionId];
-  const isCorrect = detailedResult?.correct;
   const pointsAwarded = detailedResult?.points || 0;
   const requiresManualGrading = detailedResult?.requiresManualGrading;
+  
+  // Fix: Determine if answer is correct based on points earned vs total points
+  // For manually graded questions, check if points earned equals total points
+  // For auto-graded questions, use the 'correct' property if available, otherwise fall back to points comparison
+  const isCorrect = detailedResult?.correct !== undefined 
+    ? detailedResult.correct 
+    : pointsAwarded === question.points;
 
   // Helper function to render text with LaTeX support
   const renderTextWithLatex = (text: string): React.ReactElement => {
