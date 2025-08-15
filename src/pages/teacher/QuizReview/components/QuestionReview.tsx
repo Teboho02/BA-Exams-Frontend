@@ -34,13 +34,13 @@ const QuestionReview: React.FC<QuestionReviewProps> = ({ question, studentAnswer
                     <div className="answer-comparison">
                         <div className="student-answer">
                             <h5>Student Answer:</h5>
-                            <div>{renderTextWithLatex(studentAnswer.studentAnswerText || '<em>No answer submitted</em>')}</div>
+                            <h3>{renderTextWithLatex(studentAnswer.studentAnswerText || '<em>No answer submitted</em>')}</h3>
                         </div>
 
                         {question.questionType !== 'short_answer' && question.questionType !== 'essay' && (
                             <div className="correct-answer">
                                 <h5>Correct Answer:</h5>
-                                <div>{renderTextWithLatex(studentAnswer.correctAnswerText)}</div>
+                                <h3>{renderTextWithLatex(studentAnswer.correctAnswerText)}</h3>
                             </div>
                         )}
                     </div>

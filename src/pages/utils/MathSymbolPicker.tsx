@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 
@@ -12,8 +11,7 @@ type NodeArrayField =
   | 'radicand'
   | 'integrand'
   | 'lowerLimit'
-  | 'upperLimit'
-  | 'variable';
+  | 'upperLimit';
 
 const CHILD_FIELDS: NodeArrayField[] = [
   'numerator',
@@ -25,148 +23,48 @@ const CHILD_FIELDS: NodeArrayField[] = [
   'integrand',
   'lowerLimit',
   'upperLimit',
-  'variable',
 ];
 
-const MATH_SYMBOLS = {
-  Basic: [
-    { symbol: 'x₁', latex: 'x_{1}', name: 'Subscript' },
-    { symbol: 'x²', latex: 'x^{2}', name: 'Superscript' },
-    { symbol: '½', latex: '\\frac{1}{2}', name: 'Fraction' },
-    { symbol: '√', latex: '\\sqrt{}', name: 'Square Root' },
-    { symbol: '∛', latex: '\\sqrt[3]{}', name: 'Cube Root' },
-    { symbol: '⟨', latex: '\\langle', name: 'Left Angle' },
-    { symbol: '⟩', latex: '\\rangle', name: 'Right Angle' },
-    { symbol: 'ƒ', latex: 'f', name: 'Function' },
-    { symbol: '′', latex: '\\prime', name: 'Prime' },
-    { symbol: '+', latex: '+', name: 'Plus' },
-    { symbol: '−', latex: '-', name: 'Minus' },
-    { symbol: '±', latex: '\\pm', name: 'Plus/Minus' },
-    { symbol: '∓', latex: '\\mp', name: 'Minus/Plus' },
-    { symbol: '·', latex: '\\cdot', name: 'Dot' },
-    { symbol: '=', latex: '=', name: 'Equals' },
-    { symbol: '×', latex: '\\times', name: 'Times' },
-    { symbol: '÷', latex: '\\div', name: 'Division' },
-    { symbol: '∗', latex: '\\ast', name: 'Asterisk' },
-    { symbol: '∴', latex: '\\therefore', name: 'Therefore' },
-    { symbol: '∵', latex: '\\because', name: 'Because' },
-    { symbol: '∑', latex: '\\sum', name: 'Sum' },
-    { symbol: '∏', latex: '\\prod', name: 'Product' },
-    { symbol: '∐', latex: '\\coprod', name: 'Coproduct' },
-    { symbol: '∫', latex: '\\int', name: 'Integral' },
-    { symbol: 'ℕ', latex: '\\mathbb{N}', name: 'Natural' },
-    { symbol: 'ℙ', latex: '\\mathbb{P}', name: 'Prime' },
-    { symbol: 'ℤ', latex: '\\mathbb{Z}', name: 'Integer' },
-    { symbol: 'ℚ', latex: '\\mathbb{Q}', name: 'Rational' },
-    { symbol: 'ℝ', latex: '\\mathbb{R}', name: 'Real' },
-    { symbol: 'ℂ', latex: '\\mathbb{C}', name: 'Complex' },
-  ],
-  Greek: [
-    { symbol: 'α', latex: '\\alpha', name: 'Alpha' },
-    { symbol: 'β', latex: '\\beta', name: 'Beta' },
-    { symbol: 'γ', latex: '\\gamma', name: 'Gamma' },
-    { symbol: 'δ', latex: '\\delta', name: 'Delta' },
-    { symbol: 'ε', latex: '\\epsilon', name: 'Epsilon' },
-    { symbol: 'ζ', latex: '\\zeta', name: 'Zeta' },
-    { symbol: 'η', latex: '\\eta', name: 'Eta' },
-    { symbol: 'θ', latex: '\\theta', name: 'Theta' },
-    { symbol: 'ι', latex: '\\iota', name: 'Iota' },
-    { symbol: 'κ', latex: '\\kappa', name: 'Kappa' },
-    { symbol: 'λ', latex: '\\lambda', name: 'Lambda' },
-    { symbol: 'μ', latex: '\\mu', name: 'Mu' },
-    { symbol: 'ν', latex: '\\nu', name: 'Nu' },
-    { symbol: 'ξ', latex: '\\xi', name: 'Xi' },
-    { symbol: 'π', latex: '\\pi', name: 'Pi' },
-    { symbol: 'ρ', latex: '\\rho', name: 'Rho' },
-    { symbol: 'σ', latex: '\\sigma', name: 'Sigma' },
-    { symbol: 'τ', latex: '\\tau', name: 'Tau' },
-    { symbol: 'φ', latex: '\\phi', name: 'Phi' },
-    { symbol: 'χ', latex: '\\chi', name: 'Chi' },
-    { symbol: 'ψ', latex: '\\psi', name: 'Psi' },
-    { symbol: 'ω', latex: '\\omega', name: 'Omega' },
-    { symbol: 'Γ', latex: '\\Gamma', name: 'Gamma (upper)' },
-    { symbol: 'Δ', latex: '\\Delta', name: 'Delta (upper)' },
-    { symbol: 'Θ', latex: '\\Theta', name: 'Theta (upper)' },
-    { symbol: 'Λ', latex: '\\Lambda', name: 'Lambda (upper)' },
-    { symbol: 'Π', latex: '\\Pi', name: 'Pi (upper)' },
-    { symbol: 'Σ', latex: '\\Sigma', name: 'Sigma (upper)' },
-    { symbol: 'Φ', latex: '\\Phi', name: 'Phi (upper)' },
-    { symbol: 'Ψ', latex: '\\Psi', name: 'Psi (upper)' },
-    { symbol: 'Ω', latex: '\\Omega', name: 'Omega (upper)' },
-  ],
-  Operators: [
-    { symbol: '∇', latex: '\\nabla', name: 'Nabla' },
-    { symbol: '∂', latex: '\\partial', name: 'Partial' },
-    { symbol: '∆', latex: '\\Delta', name: 'Laplace' },
-    { symbol: '∅', latex: '\\emptyset', name: 'Empty Set' },
-    { symbol: '∈', latex: '\\in', name: 'Element of' },
-    { symbol: '∉', latex: '\\notin', name: 'Not Element' },
-    { symbol: '∋', latex: '\\ni', name: 'Contains' },
-    { symbol: '⊂', latex: '\\subset', name: 'Subset' },
-    { symbol: '⊃', latex: '\\supset', name: 'Superset' },
-    { symbol: '⊆', latex: '\\subseteq', name: 'Subset Equal' },
-    { symbol: '⊇', latex: '\\supseteq', name: 'Superset Equal' },
-    { symbol: '∪', latex: '\\cup', name: 'Union' },
-    { symbol: '∩', latex: '\\cap', name: 'Intersection' },
-    { symbol: '⊕', latex: '\\oplus', name: 'Direct Sum' },
-    { symbol: '⊗', latex: '\\otimes', name: 'Tensor Product' },
-    { symbol: '⊥', latex: '\\perp', name: 'Perpendicular' },
-    { symbol: '∥', latex: '\\parallel', name: 'Parallel' },
-  ],
-  Relationships: [
-    { symbol: '<', latex: '<', name: 'Less Than' },
-    { symbol: '>', latex: '>', name: 'Greater Than' },
-    { symbol: '≤', latex: '\\leq', name: 'Less or Equal' },
-    { symbol: '≥', latex: '\\geq', name: 'Greater or Equal' },
-    { symbol: '≪', latex: '\\ll', name: 'Much Less' },
-    { symbol: '≫', latex: '\\gg', name: 'Much Greater' },
-    { symbol: '≠', latex: '\\neq', name: 'Not Equal' },
-    { symbol: '≈', latex: '\\approx', name: 'Approximately' },
-    { symbol: '≡', latex: '\\equiv', name: 'Equivalent' },
-    { symbol: '∼', latex: '\\sim', name: 'Similar' },
-    { symbol: '≅', latex: '\\cong', name: 'Congruent' },
-    { symbol: '∝', latex: '\\propto', name: 'Proportional' },
-    { symbol: '⊢', latex: '\\vdash', name: 'Proves' },
-    { symbol: '⊨', latex: '\\models', name: 'Models' },
-  ],
-  Arrows: [
-    { symbol: '→', latex: '\\rightarrow', name: 'Right Arrow' },
-    { symbol: '←', latex: '\\leftarrow', name: 'Left Arrow' },
-    { symbol: '↑', latex: '\\uparrow', name: 'Up Arrow' },
-    { symbol: '↓', latex: '\\downarrow', name: 'Down Arrow' },
-    { symbol: '↔', latex: '\\leftrightarrow', name: 'Both Ways' },
-    { symbol: '⇒', latex: '\\Rightarrow', name: 'Implies' },
-    { symbol: '⇐', latex: '\\Leftarrow', name: 'Implied By' },
-    { symbol: '⇔', latex: '\\Leftrightarrow', name: 'If and Only If' },
-    { symbol: '↦', latex: '\\mapsto', name: 'Maps To' },
-    { symbol: '⇝', latex: '\\leadsto', name: 'Leads To' },
-  ],
-  Misc: [
-    { symbol: '∞', latex: '\\infty', name: 'Infinity' },
-    { symbol: '∀', latex: '\\forall', name: 'For All' },
-    { symbol: '∃', latex: '\\exists', name: 'Exists' },
-    { symbol: '∄', latex: '\\nexists', name: 'Not Exists' },
-    { symbol: '¬', latex: '\\neg', name: 'Negation' },
-    { symbol: '∧', latex: '\\land', name: 'And' },
-    { symbol: '∨', latex: '\\lor', name: 'Or' },
-    { symbol: '⊤', latex: '\\top', name: 'True' },
-    { symbol: '⊥', latex: '\\bot', name: 'False' },
-    { symbol: '°', latex: '^\\circ', name: 'Degree' },
-    { symbol: '∠', latex: '\\angle', name: 'Angle' },
-    { symbol: '⊙', latex: '\\odot', name: 'Circle Dot' },
-    { symbol: '□', latex: '\\square', name: 'Square' },
-    { symbol: '△', latex: '\\triangle', name: 'Triangle' },
-    { symbol: '◯', latex: '\\bigcirc', name: 'Circle' },
-    { symbol: '…', latex: '\\ldots', name: 'Ellipsis' },
-    { symbol: '⋯', latex: '\\cdots', name: 'Center Dots' },
-    { symbol: '⋮', latex: '\\vdots', name: 'Vertical Dots' },
-    { symbol: '⋱', latex: '\\ddots', name: 'Diagonal Dots' },
-  ],
-} as const;
+// Simplified symbol set focused on essential math operations
+const ESSENTIAL_SYMBOLS = [
+  { symbol: '√', latex: '\\sqrt{}', name: 'Square Root' },
+  { symbol: 'x²', latex: 'x^{2}', name: 'Superscript' },
+  { symbol: 'x₁', latex: 'x_{1}', name: 'Subscript' },
+  { symbol: '½', latex: '\\frac{1}{2}', name: 'Fraction' },
+  { symbol: '∑', latex: '\\sum', name: 'Sum' },
+  { symbol: '<', latex: '<', name: 'Less Than' },
+  { symbol: '>', latex: '>', name: 'Greater Than' },
+  { symbol: '≈', latex: '\\approx', name: 'Approximately' },
+  { symbol: '∞', latex: '\\infty', name: 'Infinity' },
+  { symbol: '±', latex: '\\pm', name: 'Plus/Minus' },
+  { symbol: '=', latex: '=', name: 'Equals' },
+  { symbol: '+', latex: '+', name: 'Plus' },
+  { symbol: '−', latex: '-', name: 'Minus' },
+];
+
+// Quick symbols for the visual builder
+const QUICK_SYMBOLS = [
+  { symbol: '±', content: '±', name: 'Plus/Minus' },
+  { symbol: '=', content: '=', name: 'Equals' },
+  { symbol: '+', content: '+', name: 'Plus' },
+  { symbol: '−', content: '−', name: 'Minus' },
+  { symbol: '×', content: '×', name: 'Multiply' },
+  { symbol: '÷', content: '÷', name: 'Divide' },
+  { symbol: '≤', content: '≤', name: 'Less/Equal' },
+  { symbol: '≥', content: '≥', name: 'Greater/Equal' },
+  { symbol: '≠', content: '≠', name: 'Not Equal' },
+  { symbol: '∞', content: '∞', name: 'Infinity' },
+  { symbol: 'π', content: 'π', name: 'Pi' },
+  { symbol: 'α', content: 'α', name: 'Alpha' },
+  { symbol: 'β', content: 'β', name: 'Beta' },
+  { symbol: 'θ', content: 'θ', name: 'Theta' },
+  { symbol: 'Δ', content: 'Δ', name: 'Delta' },
+  { symbol: '∈', content: '∈', name: 'Element of' },
+];
 
 interface ExpressionNode {
   id: string;
-  type: 'text' | 'fraction' | 'sqrt' | 'power' | 'subscript' | 'integral' | 'sum';
+  type: 'text' | 'fraction' | 'sqrt' | 'power' | 'subscript' | 'sum';
   content?: string;
   numerator?: ExpressionNode[];
   denominator?: ExpressionNode[];
@@ -177,7 +75,6 @@ interface ExpressionNode {
   integrand?: ExpressionNode[];
   lowerLimit?: ExpressionNode[];
   upperLimit?: ExpressionNode[];
-  variable?: ExpressionNode[];
 }
 
 interface MathSymbolPickerProps {
@@ -187,11 +84,11 @@ interface MathSymbolPickerProps {
 }
 
 const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, targetRef }) => {
-  const [activeTab, setActiveTab] = useState<string>('Basic');
   const [searchTerm, setSearchTerm] = useState('');
   const [customLatex, setCustomLatex] = useState('');
-  const [mode, setMode] = useState<'symbols' | 'custom' | 'visual'>('symbols');
+  const [mode, setMode] = useState<'symbols' | 'custom' | 'visual'>('visual');
 
+  console.log(targetRef)
   const [expression, setExpression] = useState<ExpressionNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -203,10 +100,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
 
   const modalRef = useRef<HTMLDivElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
-
-  if (!targetRef) {
-    console.error('targetRef is required for MathSymbolPicker');
-  }
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -289,7 +182,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
   };
 
   const addSquareRoot = () => {
-    // Supports optional index (nth root) via 'index' field
     const newNode: ExpressionNode = {
       id: generateId(),
       type: 'sqrt',
@@ -319,18 +211,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
     addNodeToExpression(newNode);
   };
 
-  const addIntegral = () => {
-    const newNode: ExpressionNode = {
-      id: generateId(),
-      type: 'integral',
-      integrand: [{ id: generateId(), type: 'text', content: 'f(x)' }],
-      lowerLimit: [{ id: generateId(), type: 'text', content: 'a' }],
-      upperLimit: [{ id: generateId(), type: 'text', content: 'b' }],
-      variable: [{ id: generateId(), type: 'text', content: 'dx' }],
-    };
-    addNodeToExpression(newNode);
-  };
-
   const addSum = () => {
     const newNode: ExpressionNode = {
       id: generateId(),
@@ -340,6 +220,40 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
       upperLimit: [{ id: generateId(), type: 'text', content: 'n' }],
     };
     addNodeToExpression(newNode);
+  };
+
+  // Preset equation creators
+  const addQuadraticFormula = () => {
+    const formula: ExpressionNode = {
+      id: generateId(),
+      type: 'text',
+      content: 'x = '
+    };
+    
+    const fraction: ExpressionNode = {
+      id: generateId(),
+      type: 'fraction',
+      numerator: [
+        { id: generateId(), type: 'text', content: '-b ± ' },
+        {
+          id: generateId(),
+          type: 'sqrt',
+          index: [],
+          radicand: [
+            {
+              id: generateId(),
+              type: 'power',
+              base: [{ id: generateId(), type: 'text', content: 'b' }],
+              exponent: [{ id: generateId(), type: 'text', content: '2' }]
+            },
+            { id: generateId(), type: 'text', content: ' - 4ac' }
+          ]
+        }
+      ],
+      denominator: [{ id: generateId(), type: 'text', content: '2a' }]
+    };
+
+    setExpression([formula, fraction]);
   };
 
   const updateNodeContent = (nodeId: string, content: string) => {
@@ -376,13 +290,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             const subBase = generateLatex(node.base || []);
             const subIndex = generateLatex(node.index || []);
             return `{${subBase}}_{${subIndex}}`;
-          }
-          case 'integral': {
-            const integrand = generateLatex(node.integrand || []);
-            const lower = generateLatex(node.lowerLimit || []);
-            const upper = generateLatex(node.upperLimit || []);
-            const variable = generateLatex(node.variable || []);
-            return `\\int_{${lower}}^{${upper}} ${integrand} \\, ${variable}`;
           }
           case 'sum': {
             const sumIntegrand = generateLatex(node.integrand || []);
@@ -457,10 +364,9 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
 
   // Filter symbols based on search
   const getFilteredSymbols = () => {
-    if (!searchTerm) return (MATH_SYMBOLS as any)[activeTab] || [];
+    if (!searchTerm) return ESSENTIAL_SYMBOLS;
     const term = searchTerm.toLowerCase();
-    const allSymbols = Object.values(MATH_SYMBOLS).flat() as { symbol: string; latex: string; name: string }[];
-    return allSymbols.filter(
+    return ESSENTIAL_SYMBOLS.filter(
       (s) =>
         s.name.toLowerCase().includes(term) ||
         s.symbol.toLowerCase().includes(term) ||
@@ -481,7 +387,7 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
     alignItems: 'center',
     margin: '2px',
     padding: '4px',
-    border: isSelected ? '1px solid #3b82f6' : '1px solid #e5e5e5',
+    border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e5e5',
     borderRadius: '4px',
     background: isEditingContext ? '#e0f2fe' : 'white',
     boxShadow: isSelected ? '0 0 0 2px rgba(59, 130, 246, 0.2)' : 'none',
@@ -506,11 +412,12 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
   const contextButtonStyle = {
     padding: '2px 4px',
     fontSize: '10px',
-    margin: '2px',
+    margin: '1px',
     background: '#dbeafe',
     border: '1px solid #93c5fd',
-    borderRadius: '4px',
+    borderRadius: '3px',
     cursor: 'pointer',
+    color: '#1e40af',
   } as const;
 
   const renderNode = (node: ExpressionNode): React.ReactNode => {
@@ -537,14 +444,13 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                 border: 'none',
                 outline: 'none',
                 background: 'transparent',
-                minWidth: '20px',
-                width: 'auto',
+                minWidth: '30px',
+                width: `${Math.max(30, (node.content || '').length * 8 + 10)}px`,
                 fontSize: '14px',
                 color: 'black',
               }}
             />
             <button
-              data-role="remove"
               onClick={() => removeNode(node.id)}
               title="Remove"
               style={removeButtonBaseStyle(showRemove)}
@@ -563,7 +469,7 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseLeave={() => setHoveredNodeId(null)}
           >
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', minWidth: '20px', minHeight: '20px', padding: '2px 4px', color: 'black' }}>
+              <div style={{ display: 'flex', alignItems: 'center', minWidth: '40px', minHeight: '25px', padding: '2px 4px', justifyContent: 'center' }}>
                 {(node.numerator || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -573,8 +479,8 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   +
                 </button>
               </div>
-              <div style={{ width: '100%', minWidth: '30px', height: '1px', background: '#000', margin: '1px 0' }}></div>
-              <div style={{ display: 'flex', alignItems: 'center', minWidth: '20px', minHeight: '20px', padding: '2px 4px', color: 'black' }}>
+              <div style={{ width: '100%', minWidth: '40px', height: '2px', background: '#000', margin: '1px 0' }}></div>
+              <div style={{ display: 'flex', alignItems: 'center', minWidth: '40px', minHeight: '25px', padding: '2px 4px', justifyContent: 'center' }}>
                 {(node.denominator || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -586,7 +492,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
               </div>
             </div>
             <button
-              data-role="remove"
               onClick={() => removeNode(node.id)}
               title="Remove fraction"
               style={removeButtonBaseStyle(showRemove)}
@@ -604,46 +509,29 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', margin: '0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ fontSize: '20px', fontWeight: 'bold', marginRight: '4px', color: 'black' }}>√</div>
-                <div
-                  style={{
-                    borderTop: '1px solid #000',
-                    padding: '2px 4px 0 4px',
-                    minWidth: '20px',
-                    minHeight: '20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    color: 'black',
-                  }}
+            <div style={{ display: 'flex', alignItems: 'center', margin: '0 4px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', marginRight: '2px', color: 'black', lineHeight: '1' }}>√</div>
+              <div
+                style={{
+                  borderTop: '2px solid #000',
+                  padding: '2px 4px 0 4px',
+                  minWidth: '30px',
+                  minHeight: '25px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {(node.radicand || []).map((n) => renderNode(n))}
+                <button
+                  style={contextButtonStyle}
+                  onClick={() => handleSetEditingContext(node.id, 'radicand')}
+                  title="Add to radicand"
                 >
-                  {(node.radicand || []).map((n) => renderNode(n))}
-                  <button
-                    style={contextButtonStyle}
-                    onClick={() => handleSetEditingContext(node.id, 'radicand')}
-                    title="Add to radicand"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', fontSize: '11px', color: '#111' }}>
-                <span style={{ marginRight: '4px' }}>Index:</span>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {(node.index || []).map((n) => renderNode(n))}
-                  <button
-                    style={contextButtonStyle}
-                    onClick={() => handleSetEditingContext(node.id, 'index')}
-                    title="Add index (nth root)"
-                  >
-                    +
-                  </button>
-                </div>
+                  +
+                </button>
               </div>
             </div>
             <button
-              data-role="remove"
               onClick={() => removeNode(node.id)}
               title="Remove square root"
               style={removeButtonBaseStyle(showRemove)}
@@ -661,19 +549,8 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                {(node.base || []).map((n) => renderNode(n))}
-                <button
-                  style={contextButtonStyle}
-                  onClick={() => handleSetEditingContext(node.id, 'base')}
-                  title="Add to base"
-                >
-                  +
-                </button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', marginTop: '-5px' }}>
-                <div style={{ fontSize: '10px', marginRight: '2px' }}>^</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', minHeight: '15px' }}>
                 {(node.exponent || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -683,9 +560,18 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   +
                 </button>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px', minHeight: '20px' }}>
+                {(node.base || []).map((n) => renderNode(n))}
+                <button
+                  style={contextButtonStyle}
+                  onClick={() => handleSetEditingContext(node.id, 'base')}
+                  title="Add to base"
+                >
+                  +
+                </button>
+              </div>
             </div>
             <button
-              data-role="remove"
               onClick={() => removeNode(node.id)}
               title="Remove power"
               style={removeButtonBaseStyle(showRemove)}
@@ -703,8 +589,8 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', fontSize: '14px', minHeight: '20px' }}>
                 {(node.base || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -714,8 +600,7 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   +
                 </button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', marginTop: '-5px' }}>
-                <div style={{ fontSize: '10px', marginRight: '2px' }}>_</div>
+              <div style={{ display: 'flex', alignItems: 'center', fontSize: '12px', minHeight: '15px' }}>
                 {(node.index || []).map((n) => renderNode(n))}
                 <button
                   style={contextButtonStyle}
@@ -727,7 +612,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
               </div>
             </div>
             <button
-              data-role="remove"
               onClick={() => removeNode(node.id)}
               title="Remove subscript"
               style={removeButtonBaseStyle(showRemove)}
@@ -745,128 +629,44 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             onMouseEnter={() => setHoveredNodeId(node.id)}
             onMouseLeave={() => setHoveredNodeId(null)}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'black' }}>Σ</div>
-              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Upper:</span>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {(node.upperLimit || []).map((n) => renderNode(n))}
-                    <button
-                      style={contextButtonStyle}
-                      onClick={() => handleSetEditingContext(node.id, 'upperLimit')}
-                      title="Add upper limit"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Lower:</span>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {(node.lowerLimit || []).map((n) => renderNode(n))}
-                    <button
-                      style={contextButtonStyle}
-                      onClick={() => handleSetEditingContext(node.id, 'lowerLimit')}
-                      title="Add lower limit"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', marginTop: '5px' }}>
-                <div style={{ marginRight: '5px' }}>Expression:</div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {(node.integrand || []).map((n) => renderNode(n))}
+            <div style={{ display: 'flex', alignItems: 'center', margin: '0 4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: '10px', marginBottom: '2px' }}>
+                  {(node.upperLimit || []).map((n) => renderNode(n))}
                   <button
                     style={contextButtonStyle}
-                    onClick={() => handleSetEditingContext(node.id, 'integrand')}
-                    title="Add expression"
+                    onClick={() => handleSetEditingContext(node.id, 'upperLimit')}
+                    title="Add upper limit"
+                  >
+                    +
+                  </button>
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'black', lineHeight: '1' }}>Σ</div>
+                <div style={{ display: 'flex', alignItems: 'center', fontSize: '10px', marginTop: '2px' }}>
+                  {(node.lowerLimit || []).map((n) => renderNode(n))}
+                  <button
+                    style={contextButtonStyle}
+                    onClick={() => handleSetEditingContext(node.id, 'lowerLimit')}
+                    title="Add lower limit"
                   >
                     +
                   </button>
                 </div>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {(node.integrand || []).map((n) => renderNode(n))}
+                <button
+                  style={contextButtonStyle}
+                  onClick={() => handleSetEditingContext(node.id, 'integrand')}
+                  title="Add expression"
+                >
+                  +
+                </button>
+              </div>
             </div>
             <button
-              data-role="remove"
               onClick={() => removeNode(node.id)}
               title="Remove sum"
-              style={removeButtonBaseStyle(showRemove)}
-            >
-              ×
-            </button>
-          </div>
-        );
-
-      case 'integral':
-        return (
-          <div
-            key={node.id}
-            style={nodeContainerStyle(isSelected, isEditHere)}
-            onMouseEnter={() => setHoveredNodeId(node.id)}
-            onMouseLeave={() => setHoveredNodeId(null)}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'black' }}>∫</div>
-              <div style={{ display: 'flex', flexDirection: 'column', fontSize: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Upper:</span>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {(node.upperLimit || []).map((n) => renderNode(n))}
-                    <button
-                      style={contextButtonStyle}
-                      onClick={() => handleSetEditingContext(node.id, 'upperLimit')}
-                      title="Add upper limit"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Lower:</span>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {(node.lowerLimit || []).map((n) => renderNode(n))}
-                    <button
-                      style={contextButtonStyle}
-                      onClick={() => handleSetEditingContext(node.id, 'lowerLimit')}
-                      title="Add lower limit"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', marginTop: '5px' }}>
-                <div style={{ marginRight: '5px' }}>Integrand:</div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {(node.integrand || []).map((n) => renderNode(n))}
-                  <button
-                    style={contextButtonStyle}
-                    onClick={() => handleSetEditingContext(node.id, 'integrand')}
-                    title="Add integrand"
-                  >
-                    +
-                  </button>
-                </div>
-                <div style={{ marginLeft: '8px', marginRight: '5px' }}>d:</div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {(node.variable || []).map((n) => renderNode(n))}
-                  <button
-                    style={contextButtonStyle}
-                    onClick={() => handleSetEditingContext(node.id, 'variable')}
-                    title="Add variable (e.g., dx)"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
-            <button
-              data-role="remove"
-              onClick={() => removeNode(node.id)}
-              title="Remove integral"
               style={removeButtonBaseStyle(showRemove)}
             >
               ×
@@ -901,8 +701,8 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
           color: 'black',
           borderRadius: '8px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          maxWidth: '800px',
-          width: '90%',
+          maxWidth: '900px',
+          width: '95%',
           maxHeight: '90vh',
           overflowY: 'auto',
         }}
@@ -937,19 +737,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
         {/* Mode Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid #e5e5e5', backgroundColor: '#f9f9f9' }}>
           <button
-            onClick={() => setMode('symbols')}
-            style={{
-              padding: '12px 16px',
-              border: 'none',
-              backgroundColor: mode === 'symbols' ? 'white' : 'transparent',
-              borderBottom: mode === 'symbols' ? '2px solid #3b82f6' : '2px solid transparent',
-              cursor: 'pointer',
-              color: 'black',
-            }}
-          >
-            Symbols
-          </button>
-          <button
             onClick={() => setMode('visual')}
             style={{
               padding: '12px 16px',
@@ -961,6 +748,19 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             }}
           >
             Visual Builder
+          </button>
+          <button
+            onClick={() => setMode('symbols')}
+            style={{
+              padding: '12px 16px',
+              border: 'none',
+              backgroundColor: mode === 'symbols' ? 'white' : 'transparent',
+              borderBottom: mode === 'symbols' ? '2px solid #3b82f6' : '2px solid transparent',
+              cursor: 'pointer',
+              color: 'black',
+            }}
+          >
+            Symbols
           </button>
           <button
             onClick={() => setMode('custom')}
@@ -999,40 +799,17 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
               />
             </div>
 
-            {/* Tabs */}
-            {!searchTerm && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '0 16px 16px 16px' }}>
-                {Object.keys(MATH_SYMBOLS).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    style={{
-                      padding: '6px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      backgroundColor: activeTab === tab ? '#3b82f6' : 'white',
-                      color: activeTab === tab ? 'white' : 'black',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                    }}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Symbols Grid */}
             <div style={{ padding: '16px' }}>
               {symbols.length > 0 ? (
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
-                    gap: '8px',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                    gap: '12px',
                   }}
                 >
-                  {symbols.map((item: any, index : any) => (
+                  {symbols.map((item, index) => (
                     <button
                       key={`${item.symbol}-${index}`}
                       onClick={() => handleSymbolClick(item.symbol, item.latex)}
@@ -1040,25 +817,32 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        padding: '8px',
+                        padding: '12px',
                         border: '1px solid #d1d5db',
-                        borderRadius: '4px',
+                        borderRadius: '6px',
                         backgroundColor: 'white',
                         color: 'black',
                         cursor: 'pointer',
                         textAlign: 'center',
+                        transition: 'all 0.2s',
                       }}
                       title={`${item.name} (LaTeX: ${item.latex})`}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
                     >
-                      <span style={{ fontSize: '18px', marginBottom: '4px', color: 'black' }}>{item.symbol}</span>
-                      <span style={{ fontSize: '10px', color: '#333' }}>{item.name}</span>
+                      <span style={{ fontSize: '20px', marginBottom: '6px', color: 'black' }}>{item.symbol}</span>
+                      <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>{item.name}</span>
                     </button>
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#333', padding: '40px' }}>
+                <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>
                   No symbols found matching "{searchTerm}"
                 </div>
               )}
@@ -1069,191 +853,283 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
         {mode === 'visual' && (
           <>
             {/* Visual Builder Toolbar */}
-            <div style={{ padding: '16px', borderBottom: '1px solid #e5e5e5', backgroundColor: '#f9f9f9', color: 'black' }}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
-                  gap: '8px',
-                  marginBottom: '16px',
-                }}
-              >
-                <button
-                  onClick={() => addTextNode()}
+            <div style={{ padding: '16px', borderBottom: '1px solid #e5e5e5', backgroundColor: '#f9f9f9' }}>
+              {/* Quick Symbols Section */}
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0', color: 'black' }}>
+                  Quick Symbols:
+                </h3>
+                <div
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
+                    gap: '6px',
+                    maxHeight: '120px',
+                    overflowY: 'auto',
                     padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
                     backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: 'black',
+                    border: '1px solid #e5e5e5',
+                    borderRadius: '6px',
                   }}
-                  title="Add text"
                 >
-                  <span style={{ fontSize: '14px', fontFamily: 'monospace', color: 'black' }}>abc</span>
-                  <span style={{ fontSize: '12px', color: 'black' }}>Text</span>
-                </button>
-                <button
-                  onClick={addFraction}
+                  {QUICK_SYMBOLS.map((item, index) => (
+                    <button
+                      key={`${item.symbol}-${index}`}
+                      onClick={() => addTextNode(item.content)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '6px 4px',
+                        border: '1px solid #e5e5e5',
+                        borderRadius: '4px',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        color: 'black',
+                        fontSize: '12px',
+                        minHeight: '45px',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                      }}
+                      title={`Insert ${item.name}`}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f0f9ff';
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.borderColor = '#e5e5e5';
+                      }}
+                    >
+                      <span style={{ fontSize: '16px', color: 'black', marginBottom: '2px' }}>{item.symbol}</span>
+                      <span style={{ fontSize: '9px', color: '#666', textAlign: 'center', lineHeight: '1.2' }}>
+                        {item.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0', color: 'black' }}>
+                  Basic Components:
+                </h3>
+                <div
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: 'black',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
+                    gap: '8px',
                   }}
-                  title="Add fraction"
                 >
-                  <div style={{ fontSize: '14px', color: 'black' }}>
-                    <div style={{ borderBottom: '1px solid black', paddingLeft: '4px', paddingRight: '4px' }}>a</div>
-                    <div style={{ paddingLeft: '4px', paddingRight: '4px' }}>b</div>
-                  </div>
-                  <span style={{ fontSize: '12px', color: 'black' }}>Fraction</span>
-                </button>
-                <button
-                  onClick={addSquareRoot}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: 'black',
-                  }}
-                  title="Add square root / nth root"
-                >
-                  <span style={{ fontSize: '18px', color: 'black' }}>√</span>
-                  <span style={{ fontSize: '12px', color: 'black' }}>√ / n√</span>
-                </button>
-                <button
-                  onClick={addPower}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: 'black',
-                  }}
-                  title="Add power/exponent"
-                >
-                  <span style={{ fontSize: '14px', color: 'black' }}>
-                    x<sup>n</sup>
-                  </span>
-                  <span style={{ fontSize: '12px', color: 'black' }}>Power</span>
-                </button>
-                <button
-                  onClick={addSubscript}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: 'black',
-                  }}
-                  title="Add subscript"
-                >
-                  <span style={{ fontSize: '14px', color: 'black' }}>
-                    x<sub>i</sub>
-                  </span>
-                  <span style={{ fontSize: '12px', color: 'black' }}>Subscript</span>
-                </button>
-                <button
-                  onClick={addIntegral}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: 'black',
-                  }}
-                  title="Add integral"
-                >
-                  <span style={{ fontSize: '18px', color: 'black' }}>∫</span>
-                  <span style={{ fontSize: '12px', color: 'black' }}>Integral</span>
-                </button>
-                <button
-                  onClick={addSum}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: 'black',
-                  }}
-                  title="Add sum"
-                >
-                  <span style={{ fontSize: '18px', color: 'black' }}>Σ</span>
-                  <span style={{ fontSize: '12px', color: 'black' }}>Sum</span>
-                </button>
-                <button
-                  onClick={handleClear}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '8px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    color: '#dc2626',
-                  }}
-                  title="Clear all"
-                >
-                  <span style={{ fontSize: '18px' }}>✕</span>
-                  <span style={{ fontSize: '12px' }}>Clear</span>
-                </button>
+                  <button
+                    onClick={() => addTextNode()}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      color: 'black',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Add text"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <span style={{ fontSize: '16px', fontFamily: 'serif', color: 'black', marginBottom: '4px' }}>abc</span>
+                    <span style={{ fontSize: '11px', color: 'black' }}>Text</span>
+                  </button>
+                  
+                  <button
+                    onClick={addFraction}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      color: 'black',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Add fraction"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <div style={{ fontSize: '14px', color: 'black', marginBottom: '4px' }}>
+                      <div style={{ borderBottom: '1px solid black', paddingLeft: '6px', paddingRight: '6px', textAlign: 'center' }}>a</div>
+                      <div style={{ paddingLeft: '6px', paddingRight: '6px', textAlign: 'center' }}>b</div>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'black' }}>Fraction</span>
+                  </button>
+                  
+                  <button
+                    onClick={addSquareRoot}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      color: 'black',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Add square root"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <span style={{ fontSize: '18px', color: 'black', marginBottom: '4px' }}>√</span>
+                    <span style={{ fontSize: '11px', color: 'black' }}>Square Root</span>
+                  </button>
+                  
+                  <button
+                    onClick={addPower}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      color: 'black',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Add power/exponent"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <span style={{ fontSize: '14px', color: 'black', marginBottom: '4px' }}>
+                      x<sup>n</sup>
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'black' }}>Power</span>
+                  </button>
+                  
+                  <button
+                    onClick={addSubscript}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      color: 'black',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Add subscript"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <span style={{ fontSize: '14px', color: 'black', marginBottom: '4px' }}>
+                      x<sub>i</sub>
+                    </span>
+                    <span style={{ fontSize: '11px', color: 'black' }}>Subscript</span>
+                  </button>
+                  
+                  <button
+                    onClick={addSum}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      padding: '10px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      color: 'black',
+                      transition: 'all 0.2s',
+                    }}
+                    title="Add sum"
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f9ff'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <span style={{ fontSize: '18px', color: 'black', marginBottom: '4px' }}>Σ</span>
+                    <span style={{ fontSize: '11px', color: 'black' }}>Sum</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Preset Equations */}
+              <div style={{ marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 8px 0', color: 'black' }}>
+                  Quick Templates:
+                </h3>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={addQuadraticFormula}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #10b981',
+                      borderRadius: '6px',
+                      backgroundColor: '#f0fdf4',
+                      cursor: 'pointer',
+                      color: '#065f46',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                    }}
+                    title="Insert quadratic formula template"
+                  >
+                    Quadratic Formula
+                  </button>
+                  
+                  <button
+                    onClick={handleClear}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #ef4444',
+                      borderRadius: '6px',
+                      backgroundColor: '#fef2f2',
+                      cursor: 'pointer',
+                      color: '#dc2626',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                    }}
+                    title="Clear all"
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
 
               {/* Editing Context Indicator */}
               {editingContext && (
                 <div
                   style={{
-                    padding: '8px',
+                    padding: '10px',
                     backgroundColor: '#dbeafe',
-                    borderRadius: '4px',
-                    marginTop: '10px',
+                    borderRadius: '6px',
+                    border: '1px solid #93c5fd',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                   }}
                 >
-                  <span style={{ fontSize: '14px', color: 'black' }}>Adding into: {editingContext.field}</span>
+                  <span style={{ fontSize: '14px', color: '#1e40af', fontWeight: '500' }}>
+                    🎯 Adding to: {editingContext.field}
+                  </span>
                   <button
                     onClick={() => setEditingContext(null)}
                     style={{
                       padding: '4px 8px',
-                      background: '#93c5fd',
+                      background: '#3b82f6',
+                      color: 'white',
                       border: 'none',
                       borderRadius: '4px',
                       cursor: 'pointer',
-                      color: 'black',
+                      fontSize: '12px',
                     }}
                   >
                     Exit Context
@@ -1264,26 +1140,30 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
 
             {/* Expression Builder */}
             <div style={{ padding: '24px' }}>
-              <div style={{ marginBottom: '16px' }}>
+              <div style={{ marginBottom: '20px' }}>
                 <label
-                  style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: 'black' }}
+                  style={{ display: 'block', fontSize: '16px', fontWeight: '600', marginBottom: '12px', color: 'black' }}
                 >
-                  Expression:
+                  Your Expression:
                 </label>
                 <div
                   style={{
-                    minHeight: '100px',
+                    minHeight: '120px',
                     border: '2px dashed #d1d5db',
                     borderRadius: '8px',
-                    padding: '16px',
+                    padding: '20px',
                     backgroundColor: '#f9f9f9',
                   }}
                 >
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', color: 'black' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
                     {expression.length > 0 ? (
                       expression.map((node) => renderNode(node))
                     ) : (
-                      <div style={{ color: '#333' }}>Click buttons above to build your expression...</div>
+                      <div style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', width: '100%', padding: '20px' }}>
+                        Click buttons above to start building your equation...
+                        <br />
+                        <small style={{ color: '#999' }}>Try the quick symbols (like ±) or the "Quadratic Formula" template!</small>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1291,21 +1171,22 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
 
               {/* LaTeX Preview */}
               {expression.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
+                <div style={{ marginBottom: '20px' }}>
                   <label
-                    style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: 'black' }}
+                    style={{ display: 'block', fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: 'black' }}
                   >
                     Generated LaTeX:
                   </label>
                   <div
                     style={{
-                      backgroundColor: '#f5f5f5',
+                      backgroundColor: '#1f2937',
                       padding: '12px',
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
+                      borderRadius: '6px',
+                      fontFamily: 'Monaco, Consolas, monospace',
                       fontSize: '14px',
                       wordBreak: 'break-all',
-                      color: 'black',
+                      color: '#f3f4f6',
+                      border: '1px solid #374151',
                     }}
                   >
                     {generateLatex(expression)}
@@ -1332,7 +1213,7 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
                   border: '1px solid #d1d5db',
                   borderRadius: '4px',
                   fontSize: '14px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'Monaco, Consolas, monospace',
                   color: 'black',
                 }}
               />
@@ -1342,17 +1223,18 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
               <h4 style={{ fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: 'black' }}>Examples:</h4>
               <ul style={{ fontSize: '12px', color: '#333', margin: 0, paddingLeft: '20px' }}>
                 <li>
-                  <code style={{ color: 'black' }}>x^2 + \sqrt&#123;10&#125;</code>
+                  <code style={{ color: 'black', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>
+                    x^2 + \sqrt&#123;10&#125;
+                  </code>
                 </li>
                 <li>
-                  <code style={{ color: 'black' }}>\frac&#123;1&#125;&#123;2&#125;</code>
+                  <code style={{ color: 'black', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>
+                    \frac&#123;1&#125;&#123;2&#125;
+                  </code>
                 </li>
                 <li>
-                  <code style={{ color: 'black' }}>\int_a^b f(x)\,dx</code>
-                </li>
-                <li>
-                  <code style={{ color: 'black' }}>
-                    \frac&#123;\sqrt&#123;x^3&#125;&#125;&#123;\sum_&#123;i=0&#125;^&#123;n&#125; a_i&#125;
+                  <code style={{ color: 'black', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>
+                    \frac&#123;-b \pm \sqrt&#123;b^2 - 4ac&#125;&#125;&#123;2a&#125;
                   </code>
                 </li>
               </ul>
@@ -1371,10 +1253,10 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
             alignItems: 'center',
           }}
         >
-          <p style={{ fontSize: '14px', color: '#333', margin: 0 }}>
-            {mode === 'symbols' && 'Click a symbol to insert it at the cursor position.'}
-            {mode === 'visual' && 'Build expressions visually. Click + to add inside parts.'}
-            {mode === 'custom' && 'Type LaTeX expressions. Use \\ for commands.'}
+          <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
+            {mode === 'visual' && 'Build equations by clicking components. Quick symbols include ± and other common math symbols.'}
+            {mode === 'symbols' && 'Click symbols to insert them at cursor position.'}
+            {mode === 'custom' && 'Type LaTeX expressions. Use \\ for commands like \\frac, \\sqrt, etc.'}
           </p>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -1422,5 +1304,6 @@ const MathSymbolPicker: React.FC<MathSymbolPickerProps> = ({ onInsert, onClose, 
     </div>
   );
 };
+
 
 export default MathSymbolPicker;

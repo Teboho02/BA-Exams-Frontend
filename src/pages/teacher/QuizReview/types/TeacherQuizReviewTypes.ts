@@ -59,6 +59,7 @@ export interface StudentAnswer {
     isCorrect: boolean;
     pointsEarned: number;
     feedback: string | null;
+    isGraded: boolean;
 }
 
 export interface StudentReview {
@@ -127,4 +128,6 @@ export interface QuizReviewData {
     studentReviews: StudentReview[];
     statistics: Statistics;
     lastUpdated: string;
+     maxPoints: number;  // Add this line
+
 }

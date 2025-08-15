@@ -56,6 +56,23 @@ const TeacherCourses: React.FC = () => {
     return localStorage.getItem('accessToken');
   };
 
+  // Generate automatic course code
+  const generateCourseCode = (title: string, subject: string) => {
+    const subjectCode = subject.substring(0, 3).toUpperCase();
+    const titleCode = title.split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .substring(0, 3);
+    const timestamp = Date.now().toString().slice(-4);
+    return `${subjectCode}${titleCode}${timestamp}`;
+  };
+
+  // Get last day of current year
+  const getEndOfYear = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), 11, 31); // December 31st of current year
+  };
+
   // Fetch courses from API
   const fetchCourses = async () => {
     try {
@@ -126,16 +143,21 @@ const TeacherCourses: React.FC = () => {
         return;
       }
 
-      // Prepare data for API
+      // Set automatic values
+      const today = new Date();
+      const endOfYear = getEndOfYear();
+      const autoCode = generateCourseCode(courseData.title, courseData.subject);
+
+      // Prepare data for API with automatic values
       const apiCourseData = {
         title: courseData.title,
-        code: courseData.code,
+        code: autoCode, // Auto-generated
         subject: courseData.subject,
         description: courseData.description,
-        maxStudents: courseData.maxStudents || 50,
-        credits: courseData.credits || 3,
-        startDate: courseData.startDate?.toISOString(),
-        endDate: courseData.endDate?.toISOString(),
+        maxStudents: 999, // Always 999
+        credits: 3, // Always 3
+        startDate: today.toISOString(), // Today's date
+        endDate: endOfYear.toISOString(), // Last day of year
       };
 
       const response = await fetch(API_BASE_URL+'/api/courses', {
@@ -165,11 +187,11 @@ const TeacherCourses: React.FC = () => {
           teacherId: data.course.teacher,
           students: [],
           isActive: data.course.isActive,
-          startDate: courseData.startDate || new Date(),
-          endDate: courseData.endDate || new Date(),
+          startDate: today,
+          endDate: endOfYear,
           createdAt: new Date(data.course.createdAt),
-          maxStudents: data.course.maxStudents,
-          credits: data.course.credits,
+          maxStudents: 999,
+          credits: 3,
           currentEnrollment: 0
         };
 

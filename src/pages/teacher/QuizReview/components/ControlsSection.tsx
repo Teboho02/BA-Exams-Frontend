@@ -1,4 +1,3 @@
-// components/ControlsSection.tsx
 import React from 'react';
 
 interface ControlsSectionProps {
@@ -53,10 +52,7 @@ const ControlsSection: React.FC<ControlsSectionProps> = ({
                 </select>
             </div>
 
-            <div className="action-buttons">
-                <button className="export-btn">📊 Export Results</button>
-                <button className="email-btn">📧 Email Students</button>
-            </div>
+    
         </div>
     );
 };

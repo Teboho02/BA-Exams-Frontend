@@ -30,7 +30,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
   const [formData, setFormData] = useState<FormData>({
     title: initialData?.title || '',
     code: initialData?.code || '',
-    subject: initialData?.subject || 'Computer Science',
+    subject: initialData?.subject || 'Mathematics',
     description: initialData?.description || '',
     maxStudents: initialData?.maxStudents || 50,
     credits: initialData?.credits || 3,
@@ -42,11 +42,10 @@ const CourseForm: React.FC<CourseFormProps> = ({
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
   const subjectOptions = [
-    'Computer Science',
     'Mathematics',
     'Physics',
     'Chemistry',
-    'Biology',
+    'Life Sciences',
     'English',
     'History',
     'Geography',

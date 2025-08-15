@@ -1,4 +1,3 @@
-// TeacherAssignments.tsx - Main Component (Refactored)
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -22,7 +21,7 @@ const AssignmentCreator: React.FC = () => {
 
   // State
   const [assignment, setAssignment] = useState<Assignment>({
-    title: 'Unnamed Quiz',
+    title: 'Quiz',
     description: '',
     assignmentType: 'quiz',
     assignmentGroup: 'quizzes',
