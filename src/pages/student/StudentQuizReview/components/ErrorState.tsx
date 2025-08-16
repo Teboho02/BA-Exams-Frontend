@@ -1,0 +1,45 @@
+// components/ErrorState.tsx
+import React from 'react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
+
+interface ErrorStateProps {
+  onBack: () => void;
+  error: string;
+  title?: string;
+}
+
+const ErrorState: React.FC<ErrorStateProps> = ({ 
+  onBack, 
+  error, 
+  title = "Error"
+}) => {
+  return (
+    <div className="assignment-creator">
+      <div className="header">
+        <div className="header-content">
+          <div className="header-left">
+            <button onClick={onBack} className="btn btn-secondary" style={{ marginRight: '16px' }}>
+              <ArrowLeft size={16} />
+              Back
+            </button>
+            <h1 className="title">{title}</h1>
+          </div>
+        </div>
+      </div>
+      <div className="main-content">
+        <div className="card empty-state">
+          <div className="empty-icon">
+            <AlertCircle size={48} style={{ color: '#ef4444' }} />
+          </div>
+          <h3 className="empty-title">Unable to Load Quiz Review</h3>
+          <p className="empty-description">{error}</p>
+          <button onClick={onBack} className="btn btn-primary">
+            Go Back
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ErrorState;
