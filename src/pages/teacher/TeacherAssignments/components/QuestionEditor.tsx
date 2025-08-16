@@ -48,8 +48,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = React.memo(({
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="true_false">True/False</option>
                         <option value="short_answer">Short Answer</option>
-                        <option value="essay">Essay</option>
-                        <option value="file_upload">File Upload</option>
+                        <option value="essay">Long Answer</option>
                     </select>
                     <input
                         type="number"
