@@ -28,7 +28,6 @@ const QuizNavigator: React.FC<QuizNavigatorProps> = ({
 
   return (
     <div className="card" style={{ padding: '24px', height: 'fit-content' }}>
-      <h3 className="card-header" style={{ marginBottom: '16px' }}>Question Navigator</h3>
       
       {/* Progress Summary */}
       <div style={{ marginBottom: '20px' }}>

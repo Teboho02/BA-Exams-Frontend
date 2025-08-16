@@ -70,11 +70,11 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
         try {
             // Call the new API endpoint to save the grade
-            const response = await fetch(API_BASE_URL+`/api/quiz/submissions/${selectedStudentData.submission?.id}/questions/${questionId}/grade`, {
+            const response = await fetch(API_BASE_URL + `/api/quiz/submissions/${selectedStudentData.submission?.id}/questions/${questionId}/grade`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}` 
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 },
                 body: JSON.stringify({
                     points: grading.points
@@ -87,7 +87,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
             }
 
             const result = await response.json();
-            
+
             // Update local grading state to reflect the saved grade
             setGradingState(prev => ({
                 ...prev,
@@ -131,7 +131,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
     const calculateTotalScore = () => {
         if (!selectedStudentData.answers) return 0;
-        
+
         return questions.reduce((total, question) => {
             const answer = selectedStudentData.answers![question.id];
             if (!answer) return total;
@@ -141,7 +141,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 // Use the grading state points if available, otherwise use the answer's points
                 return total + (grading?.points ?? answer.pointsEarned) || 0;
             }
-            
+
             return total + (answer.pointsEarned || 0);
         }, 0);
     };
@@ -154,13 +154,13 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         return questions.every(question => {
             const answer = selectedStudentData.answers?.[question.id];
             if (!answer) return true; // No answer means no grading needed
-            
+
             if (question.questionType === 'essay') {
                 const grading = gradingState[question.id];
                 // Check if it's graded (either has been saved or is currently being graded)
                 return answer.isGraded || (grading?.points !== undefined && grading.points >= 0);
             }
-            
+
             return true; // Non-essay questions are auto-graded
         });
     };
@@ -168,7 +168,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     const needsGrading = (questionId: string, questionType: string): boolean => {
         const answer = selectedStudentData.answers?.[questionId];
         if (!answer || questionType !== 'essay') return false;
-        
+
         return !answer.isGraded;
     };
 
@@ -178,12 +178,12 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     const getCurrentPoints = (questionId: string, questionType: string) => {
         const answer = selectedStudentData.answers?.[questionId];
         if (!answer) return 0;
-        
+
         if (questionType === 'essay') {
             const grading = gradingState[questionId];
-            return (grading?.points ?? answer.pointsEarned )|| 0;
+            return (grading?.points ?? answer.pointsEarned) || 0;
         }
-        
+
         return answer.pointsEarned || 0;
     };
 
@@ -198,7 +198,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                         Detailed Review - {selectedStudentData.student.name || selectedStudentData.student.email}
                         <span className="close-modal" onClick={closeModal}>&times;</span>
                     </h2>
-                    
+
                     {selectedStudentData.submission && (
                         <div className="score-summary">
                             <div className="score-display">
@@ -217,7 +217,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                         </span>
                                     )}
                                 </span>
-                                
+
                                 {!isFullyGraded() && (
                                     <span className="grading-status">
                                         Manual grading required
@@ -252,7 +252,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 const answer = selectedStudentData.answers?.[question.id];
                                 const grading = gradingState[question.id];
                                 const currentPoints = getCurrentPoints(question.id, question.questionType);
-                                
+
                                 return (
                                     <div key={question.id} className="question-review-container">
                                         <div className="question-header">
@@ -264,7 +264,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                     ({question.points} {question.points === 1 ? 'point' : 'points'})
                                                 </span>
                                             </div>
-                                            
+
                                             {question.questionType === 'essay' && answer && (
                                                 <div className="grading-status-indicator">
                                                     {grading?.points !== undefined && grading.points >= 0 ? (
@@ -359,8 +359,10 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                 )}
 
                                                 <h5>Student Answer:</h5>
-                                                <div className="student-answer">
-                                                    {renderTextWithLatex(answer.studentAnswerText || 'No answer provided')}
+                                                <div
+                                                    className="student-answer"
+                                                    style={{ color: 'black', fontSize: '16px' }}
+                                                >                                                    {renderTextWithLatex(answer.studentAnswerText || 'No answer provided')}
                                                 </div>
 
                                                 {question.questionType !== 'essay' && (

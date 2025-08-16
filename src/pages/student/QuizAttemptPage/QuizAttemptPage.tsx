@@ -4,7 +4,8 @@ import {
   ArrowRight,
   Send,
   Timer,
-  AlertCircle
+  AlertCircle,
+  Save
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import './StudentQuizView.css';
@@ -35,13 +36,14 @@ const QuizAttemptPage: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [startTime] = useState(new Date());
+  const [startTime, setStartTime] = useState(new Date());
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showInstructions, setShowInstructions] = useState(true);
   const [loading, setLoading] = useState(!quiz);
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string>('');
 
   // New state for submission status
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(quizState?.hasSubmitted || false);
@@ -51,6 +53,85 @@ const QuizAttemptPage: React.FC = () => {
   // Get auth token
   const getAuthToken = () => {
     return localStorage.getItem('accessToken');
+  };
+
+  // localStorage functions
+  const saveAnswersToStorage = useCallback((answers: Answer[], assignmentId: string, timeRemaining?: number | null, startTime?: Date) => {
+    try {
+      const storageKey = `quiz_answers_${assignmentId}`;
+      const now = new Date();
+      const dataToSave = {
+        answers,
+        timeRemaining,
+        startTime: startTime?.toISOString(),
+        timestamp: Date.now(),
+        lastSaved: now.toISOString()
+      };
+      localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+      setLastSaved(now.toLocaleTimeString());
+      console.log('Answers and time saved to localStorage');
+    } catch (error) {
+      console.error('Failed to save answers to localStorage:', error);
+    }
+  }, []);
+
+  const loadAnswersFromStorage = useCallback((assignmentId: string): { answers: Answer[], timeRemaining?: number, startTime?: Date } | null => {
+    try {
+      const storageKey = `quiz_answers_${assignmentId}`;
+      const savedData = localStorage.getItem(storageKey);
+      
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        console.log('Loaded answers from localStorage:', parsedData.lastSaved);
+        
+        return {
+          answers: parsedData.answers,
+          timeRemaining: parsedData.timeRemaining,
+          startTime: parsedData.startTime ? new Date(parsedData.startTime) : undefined
+        };
+      }
+    } catch (error) {
+      console.error('Failed to load answers from localStorage:', error);
+    }
+    return null;
+  }, []);
+
+  const clearAnswersFromStorage = useCallback((assignmentId: string) => {
+    try {
+      const storageKey = `quiz_answers_${assignmentId}`;
+      localStorage.removeItem(storageKey);
+      console.log('Cleared saved answers from localStorage');
+    } catch (error) {
+      console.error('Failed to clear answers from localStorage:', error);
+    }
+  }, []);
+
+  // Show restore notification
+  const showRestoreNotification = (timeRestored: boolean = false) => {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #059669;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      font-size: 14px;
+    `;
+    notification.textContent = timeRestored 
+      ? '✓ Quiz progress and remaining time restored' 
+      : '✓ Previous answers restored from local storage';
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification);
+      }
+    }, 4000);
   };
 
   // Fetch quiz data if not provided via navigation
@@ -110,25 +191,61 @@ const QuizAttemptPage: React.FC = () => {
   useEffect(() => {
     if (!quiz && assignmentId) {
       fetchQuizData();
-    } else if (quiz && questions.length > 0) {
-      const initialAnswers: Answer[] = questions.map(q => ({
-        questionId: q.id,
-        selectedAnswer: undefined,
-        textAnswer: '',
-        isAnswered: false,
-        flagged: false
-      }));
-      setAnswers(initialAnswers);
-
-      if (quiz.hasTimeLimit && quiz.timeLimitMinutes) {
-        setTimeRemaining(quiz.timeLimitMinutes * 60); // Convert to seconds
+    } else if (quiz && questions.length > 0 && assignmentId) {
+      // Try to load saved answers first
+      const savedData = loadAnswersFromStorage(assignmentId);
+      
+      let initialAnswers: Answer[];
+      let restoredTime = false;
+      
+      if (savedData && savedData.answers && savedData.answers.length === questions.length) {
+        // Use saved answers if they exist and match current questions
+        console.log('Restoring saved answers and time');
+        initialAnswers = savedData.answers;
+        
+        // Restore start time if available
+        if (savedData.startTime) {
+          setStartTime(savedData.startTime);
+        }
+        
+        // Restore remaining time if quiz has time limit and saved time exists
+        if (quiz.hasTimeLimit && savedData.timeRemaining !== undefined && savedData.timeRemaining !== null) {
+          setTimeRemaining(savedData.timeRemaining);
+          restoredTime = true;
+        } else if (quiz.hasTimeLimit && quiz.timeLimitMinutes) {
+          // Calculate remaining time based on elapsed time since start
+          const now = new Date();
+          const elapsed = savedData.startTime ? 
+            Math.floor((now.getTime() - new Date(savedData.startTime).getTime()) / 1000) : 0;
+          const totalTimeInSeconds = quiz.timeLimitMinutes * 60;
+          const remaining = Math.max(0, totalTimeInSeconds - elapsed);
+          setTimeRemaining(remaining);
+          restoredTime = true;
+        }
+        
+        showRestoreNotification(restoredTime);
+      } else {
+        // Create fresh answers
+        initialAnswers = questions.map(q => ({
+          questionId: q.id,
+          selectedAnswer: undefined,
+          textAnswer: '',
+          isAnswered: false,
+          flagged: false
+        }));
+        
+        // Set initial time limit for new quiz attempt
+        if (quiz.hasTimeLimit && quiz.timeLimitMinutes) {
+          setTimeRemaining(quiz.timeLimitMinutes * 60);
+        }
       }
-
+      
+      setAnswers(initialAnswers);
       setLoading(false);
     }
-  }, [quiz, questions, assignmentId]);
+  }, [quiz, questions, assignmentId, loadAnswersFromStorage]);
 
-  // Timer countdown
+  // Timer countdown with auto-save
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0 || isSubmitted) return;
 
@@ -139,12 +256,35 @@ const QuizAttemptPage: React.FC = () => {
           handleSubmitQuiz();
           return 0;
         }
-        return prev - 1;
+        const newTime = prev - 1;
+        
+        // Auto-save time every 10 seconds to avoid too frequent saves
+        if (newTime % 10 === 0 && assignmentId) {
+          saveAnswersToStorage(answers, assignmentId, newTime, startTime);
+        }
+        
+        return newTime;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, isSubmitted]);
+  }, [timeRemaining, isSubmitted, answers, assignmentId, saveAnswersToStorage, startTime]);
+
+  // Cleanup and beforeunload handler
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (answers.some(answer => answer.isAnswered) && !isSubmitted) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved quiz answers. Are you sure you want to leave?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [answers, isSubmitted]);
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -164,25 +304,43 @@ const QuizAttemptPage: React.FC = () => {
   };
 
   const updateAnswer = useCallback((questionId: string, selectedAnswer?: string, textAnswer?: string) => {
-    setAnswers(prev => prev.map(answer =>
-      answer.questionId === questionId
-        ? {
-          ...answer,
-          selectedAnswer,
-          textAnswer: textAnswer !== undefined ? textAnswer : answer.textAnswer,
-          isAnswered: selectedAnswer !== undefined || (!!textAnswer && textAnswer.trim() !== '')
-        }
-        : answer
-    ));
-  }, []);
+    setAnswers(prev => {
+      const updatedAnswers = prev.map(answer =>
+        answer.questionId === questionId
+          ? {
+            ...answer,
+            selectedAnswer,
+            textAnswer: textAnswer !== undefined ? textAnswer : answer.textAnswer,
+            isAnswered: selectedAnswer !== undefined || (!!textAnswer && textAnswer.trim() !== '')
+          }
+          : answer
+      );
+      
+      // Auto-save to localStorage with current time
+      if (assignmentId) {
+        saveAnswersToStorage(updatedAnswers, assignmentId, timeRemaining, startTime);
+      }
+      
+      return updatedAnswers;
+    });
+  }, [assignmentId, saveAnswersToStorage, timeRemaining, startTime]);
 
   const toggleFlag = useCallback((questionId: string) => {
-    setAnswers(prev => prev.map(answer =>
-      answer.questionId === questionId
-        ? { ...answer, flagged: !answer.flagged }
-        : answer
-    ));
-  }, []);
+    setAnswers(prev => {
+      const updatedAnswers = prev.map(answer =>
+        answer.questionId === questionId
+          ? { ...answer, flagged: !answer.flagged }
+          : answer
+      );
+      
+      // Auto-save to localStorage with current time
+      if (assignmentId) {
+        saveAnswersToStorage(updatedAnswers, assignmentId, timeRemaining, startTime);
+      }
+      
+      return updatedAnswers;
+    });
+  }, [assignmentId, saveAnswersToStorage, timeRemaining, startTime]);
 
   const getAnsweredCount = (): number => {
     return answers.filter(answer => answer.isAnswered).length;
@@ -246,6 +404,11 @@ const QuizAttemptPage: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
+        // Clear saved answers from localStorage on successful submission
+        if (assignmentId) {
+          clearAnswersFromStorage(assignmentId);
+        }
+        
         setIsSubmitted(true);
         setShowSubmitModal(false);
         setHasSubmitted(true);
@@ -500,6 +663,12 @@ const QuizAttemptPage: React.FC = () => {
               <span className="points-display">
                 {getAnsweredCount()}/{questions.length} Answered
               </span>
+              {lastSaved && (
+                <span className="badge badge-success" style={{ fontSize: '12px' }}>
+                  <Save size={12} />
+                  Saved {lastSaved}
+                </span>
+              )}
             </div>
           </div>
           <div className="header-actions">
