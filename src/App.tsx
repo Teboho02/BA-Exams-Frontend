@@ -14,24 +14,16 @@
   import AdminReports from './pages/admin/AdminReports';
 
   // Teacher Pages
-  import TeacherDashboard from './pages/teacher/teacherDashboard/TeacherDashboard';
-  import TeacherCourses from './pages/teacher/TeacherCourses';
-  import TeacherAssignments from './pages/teacher/TeacherAssignments';
-  //import TeacherGrades from './pages/teacher/TeacherGrades';
-  import TeacherCoursePage from './pages/teacher/TeacherCoursePage';
-  import AddContentPage from './pages/teacher/AddContentPage';
+  import TeacherCourses from './pages/teacher/TeacherAllCoursesPage/TeacherCourses';
+  import TeacherAssignments from './pages/teacher/TeacherAssignments/TeacherAssignments';
+  import TeacherCoursePage from './pages/teacher/TeacherSpecificCourse/TeacherCoursePage';
   import TeacherQuizReviewPage from './pages/teacher/QuizReview/TeacherQuizReviewPage';
 
   // Student Pages
-  import StudentDashboard from './pages/student/StudentDashboard';
-  import StudentCourses from './pages/student/StudentCourses';
-  import StudentAssignments from './pages/student/StudentAssignments';
-  import StudentGrades from './pages/student/StudentGrades';
-  import StudentQuizView from './pages/student/StudentQuizView';
+  import StudentCourses from './pages/student/StudentAllCourses/StudentCourses';
   import QuizAttemptPage from './pages/student/QuizAttemptPage/QuizAttemptPage';
-  import StudentCoursePage from './pages/student/StudentCoursePage';
-  import QuizReviewPage from './pages/student/QuizReviewPage';
-  //import QuizResultsPage from './pages/student/QuizResultsPage';
+  import StudentCoursePage from './pages/student/StudentCoursePage/StudentCoursePage';
+  import StudentQuizReview from './pages/student/StudentQuizReview/StudentQuizReview';
 
   const App: React.FC = () => {
     return (
@@ -50,11 +42,9 @@
           <Route path="/admin/reports" element={<AdminReports />} />
 
           {/* Teacher Routes */}
-          <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/teacher/courses" element={<TeacherCourses />} />
           <Route path="/teacher/assignments" element={<TeacherAssignments />} />
           <Route path="/teacher/courses/:courseId" element={<TeacherCoursePage />} />
-          <Route path="/teacher/courses/:courseId/add-content" element={<AddContentPage />} />
           
           <Route path="/teacher/courses/:courseId/assignments/create" element={<TeacherAssignments />} />
           <Route path="/teacher/courses/:courseId/assignment/:assignmentId/edit" element={<TeacherAssignments />} />
@@ -63,16 +53,10 @@
           <Route path="/teacher/quiz-review/:quizId" element={<TeacherQuizReviewPage />} />
 
           {/* Student Routes */}
-          <Route path="/student" element={<StudentDashboard />} />
           <Route path="/student/courses" element={<StudentCourses />} />
-          <Route path="/student/assignments1" element={<StudentAssignments />} />
-          <Route path="/student/grades" element={<StudentGrades />} />
-          <Route path="/student/assignments/:assignmentId" element={<StudentQuizView />} />
           <Route path="/student/quizAttempt/:assignmentId" element={<QuizAttemptPage />} />
           <Route path="/student/courses/:courseId" element={<StudentCoursePage />} />
-          
-          {/* Student Quiz Review Routes */}
-          <Route path="/student/quiz/review/:submissionId" element={<QuizReviewPage />} />
+          <Route path="/student/quiz/review/:submissionId" element={<StudentQuizReview />} />
 
 
           {/* Catch-all - redirect to landing page */}

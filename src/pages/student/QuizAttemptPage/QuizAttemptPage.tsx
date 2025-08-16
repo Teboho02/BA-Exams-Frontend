@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   ArrowRight,
   Send,
   Timer,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import './StudentQuizView.css';
-
+//import MathSymbolPicker from '../../utils/MathSymbolPicker';
 // Import components
 import QuizInstructions from './QuizInstructions';
 import QuizCompletion from './QuizCompletion';
@@ -26,10 +26,10 @@ const QuizAttemptPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Get quiz data from navigation state or fetch from API
   const quizState = location.state as QuizState;
-  
+
   const [quiz, setQuiz] = useState<Assignment | null>(quizState?.assignment || null);
   const [questions, setQuestions] = useState<Question[]>(quizState?.questions || []);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -42,7 +42,7 @@ const QuizAttemptPage: React.FC = () => {
   const [loading, setLoading] = useState(!quiz);
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // New state for submission status
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(quizState?.hasSubmitted || false);
   const [canRetake, setCanRetake] = useState<boolean>(quizState?.canRetake || false);
@@ -56,18 +56,18 @@ const QuizAttemptPage: React.FC = () => {
   // Fetch quiz data if not provided via navigation
   const fetchQuizData = async () => {
     if (!assignmentId) return;
-    
+
     try {
       setLoading(true);
       setError('');
-      
+
       const token = getAuthToken();
       if (!token) {
         navigate('/login');
         return;
       }
 
-      const response = await fetch(API_BASE_URL+`/api/assignments/${assignmentId}`, {
+      const response = await fetch(API_BASE_URL + `/api/assignments/${assignmentId}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -89,7 +89,7 @@ const QuizAttemptPage: React.FC = () => {
           setError('This assignment is not a quiz');
           return;
         }
-        
+
         setQuiz(data.assignment);
         setQuestions(data.questions || []);
         setHasSubmitted(data.hasSubmitted || false);
@@ -119,11 +119,11 @@ const QuizAttemptPage: React.FC = () => {
         flagged: false
       }));
       setAnswers(initialAnswers);
-      
+
       if (quiz.hasTimeLimit && quiz.timeLimitMinutes) {
         setTimeRemaining(quiz.timeLimitMinutes * 60); // Convert to seconds
       }
-      
+
       setLoading(false);
     }
   }, [quiz, questions, assignmentId]);
@@ -150,7 +150,7 @@ const QuizAttemptPage: React.FC = () => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -164,21 +164,21 @@ const QuizAttemptPage: React.FC = () => {
   };
 
   const updateAnswer = useCallback((questionId: string, selectedAnswer?: string, textAnswer?: string) => {
-    setAnswers(prev => prev.map(answer => 
-      answer.questionId === questionId 
-        ? { 
-            ...answer, 
-            selectedAnswer,
-            textAnswer: textAnswer !== undefined ? textAnswer : answer.textAnswer,
-            isAnswered: selectedAnswer !== undefined || (!!textAnswer && textAnswer.trim() !== '')
-          }
+    setAnswers(prev => prev.map(answer =>
+      answer.questionId === questionId
+        ? {
+          ...answer,
+          selectedAnswer,
+          textAnswer: textAnswer !== undefined ? textAnswer : answer.textAnswer,
+          isAnswered: selectedAnswer !== undefined || (!!textAnswer && textAnswer.trim() !== '')
+        }
         : answer
     ));
   }, []);
 
   const toggleFlag = useCallback((questionId: string) => {
-    setAnswers(prev => prev.map(answer => 
-      answer.questionId === questionId 
+    setAnswers(prev => prev.map(answer =>
+      answer.questionId === questionId
         ? { ...answer, flagged: !answer.flagged }
         : answer
     ));
@@ -209,10 +209,10 @@ const QuizAttemptPage: React.FC = () => {
 
   const handleSubmitQuiz = async () => {
     if (isSubmitting) return;
-    
+
     try {
       setIsSubmitting(true);
-      
+
       const token = getAuthToken();
       if (!token) {
         navigate('/login');
@@ -230,7 +230,7 @@ const QuizAttemptPage: React.FC = () => {
         }
       });
 
-      const response = await fetch(API_BASE_URL+`/api/assignments/${assignmentId}/submit`, {
+      const response = await fetch(API_BASE_URL + `/api/assignments/${assignmentId}/submit`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -250,7 +250,7 @@ const QuizAttemptPage: React.FC = () => {
         setShowSubmitModal(false);
         setHasSubmitted(true);
         setSubmission(data.submission);
-        
+
         // Navigate to results after a short delay
         setTimeout(() => {
           navigate(`/student/quiz/review/${data.submission.id}`, {
@@ -282,9 +282,9 @@ const QuizAttemptPage: React.FC = () => {
         <div className="header">
           <div className="header-content">
             <div className="header-left">
-              <button 
-                onClick={() => navigate(-1)} 
-                className="btn btn-secondary" 
+              <button
+                onClick={() => navigate(-1)}
+                className="btn btn-secondary"
                 style={{ marginRight: '16px' }}
               >
                 <ArrowLeft size={16} />
@@ -295,25 +295,25 @@ const QuizAttemptPage: React.FC = () => {
           </div>
         </div>
         <div className="main-content">
-          <div className="card" style={{ 
-            padding: '32px', 
-            maxWidth: '600px', 
-            margin: '0 auto', 
-            textAlign: 'center' 
+          <div className="card" style={{
+            padding: '32px',
+            maxWidth: '600px',
+            margin: '0 auto',
+            textAlign: 'center'
           }}>
-            <h2 style={{ marginBottom: '24px' }}>Quiz Submitted</h2>
-            
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
+            <h2 style={{ marginBottom: '24px' , color: 'black'}}>Quiz Submitted</h2>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
               alignItems: 'center',
               gap: '16px',
               marginBottom: '24px'
             }}>
-              <div style={{ 
-                width: '120px', 
-                height: '120px', 
-                borderRadius: '50%', 
+              <div style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
                 background: '#f0f9ff',
                 display: 'flex',
                 flexDirection: 'column',
@@ -321,7 +321,7 @@ const QuizAttemptPage: React.FC = () => {
                 alignItems: 'center',
                 border: '4px solid #3b82f6'
               }}>
-                <span style={{ fontSize: '24px', fontWeight: 'bold' }}>
+                <span style={{ fontSize: '24px', fontWeight: 'bold' , color: '#3b82f6' }}>
                   {submission.score} / {submission.maxScore}
                 </span>
                 <span style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -329,15 +329,16 @@ const QuizAttemptPage: React.FC = () => {
                 </span>
               </div>
             </div>
-            
-            <p style={{ fontSize: '18px', marginBottom: '24px' }}>
-              {submission.percentage.toFixed(2)}%
+
+            <p style={{ fontSize: '18px', marginBottom: '24px', color: '#374151' }}>
+              {(submission?.percentage ?? 0).toFixed(2)}%
             </p>
-            
+
             {submission.feedback && (
-              <div className="feedback" style={{ 
-                marginBottom: '24px', 
+              <div className="feedback" style={{
+                marginBottom: '24px',
                 padding: '16px',
+                color: '#374151',
                 backgroundColor: '#f8f9fa',
                 borderRadius: '8px',
                 textAlign: 'left'
@@ -345,16 +346,16 @@ const QuizAttemptPage: React.FC = () => {
                 <p><strong>Feedback:</strong> {submission.feedback}</p>
               </div>
             )}
-            
-            <button 
+
+            <button
               className="btn btn-primary"
               onClick={() => navigate(`/student/quiz/review/${submission.id}`)}
               style={{ width: '100%', marginBottom: '16px' }}
             >
               Review Quiz
             </button>
-            
-            <button 
+
+            <button
               className="btn btn-secondary"
               onClick={() => navigate('/student/dashboard')}
               style={{ width: '100%' }}
@@ -383,12 +384,12 @@ const QuizAttemptPage: React.FC = () => {
         </div>
         <div className="main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              width: '32px', 
-              height: '32px', 
-              border: '3px solid #e5e7eb', 
-              borderTop: '3px solid #3b82f6', 
-              borderRadius: '50%', 
+            <div style={{
+              width: '32px',
+              height: '32px',
+              border: '3px solid #e5e7eb',
+              borderTop: '3px solid #3b82f6',
+              borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               margin: '0 auto 16px'
             }}></div>
@@ -451,7 +452,7 @@ const QuizAttemptPage: React.FC = () => {
   // Instructions screen
   if (showInstructions) {
     return (
-      <QuizInstructions 
+      <QuizInstructions
         quiz={quiz}
         questions={questions}
         onBack={() => navigate(-1)}
@@ -463,7 +464,7 @@ const QuizAttemptPage: React.FC = () => {
   // Quiz completion screen
   if (isSubmitted) {
     return (
-      <QuizCompletion 
+      <QuizCompletion
         quiz={quiz}
         questions={questions}
         answeredCount={getAnsweredCount()}
@@ -487,9 +488,9 @@ const QuizAttemptPage: React.FC = () => {
                 Question {currentQuestion + 1} of {questions.length}
               </span>
               {timeRemaining !== null && (
-                <span className="badge" style={{ 
-                  backgroundColor: getTimeColor(timeRemaining) === '#ef4444' ? '#fef2f2' : 
-                                 getTimeColor(timeRemaining) === '#f59e0b' ? '#fffbeb' : '#f0fdf4',
+                <span className="badge" style={{
+                  backgroundColor: getTimeColor(timeRemaining) === '#ef4444' ? '#fef2f2' :
+                    getTimeColor(timeRemaining) === '#f59e0b' ? '#fffbeb' : '#f0fdf4',
                   color: getTimeColor(timeRemaining)
                 }}>
                   <Timer size={14} />
@@ -502,7 +503,7 @@ const QuizAttemptPage: React.FC = () => {
             </div>
           </div>
           <div className="header-actions">
-            <button 
+            <button
               onClick={() => setShowSubmitModal(true)}
               className="btn btn-success"
               disabled={isSubmitting}
@@ -519,7 +520,7 @@ const QuizAttemptPage: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: quiz.oneQuestionAtTime ? '1fr' : '1fr 300px', gap: '24px' }}>
           {/* Main Question Area */}
           <div className="card" style={{ padding: '32px' }}>
-            <QuestionDisplay 
+            <QuestionDisplay
               question={currentQ}
               questionNumber={currentQuestion + 1}
               answer={currentAnswer}
@@ -538,7 +539,7 @@ const QuizAttemptPage: React.FC = () => {
                 <ArrowLeft size={16} />
                 Previous
               </button>
-              
+
               {currentQuestion < questions.length - 1 ? (
                 <button
                   onClick={handleNextQuestion}
@@ -564,7 +565,7 @@ const QuizAttemptPage: React.FC = () => {
 
           {/* Question Navigator Sidebar (only if not one-question-at-time) */}
           {!quiz.oneQuestionAtTime && (
-            <QuizNavigator 
+            <QuizNavigator
               quiz={quiz}
               questions={questions}
               answers={answers}
@@ -576,7 +577,7 @@ const QuizAttemptPage: React.FC = () => {
       </div>
 
       {/* Submit Confirmation Modal */}
-      <SubmitModal 
+      <SubmitModal
         isOpen={showSubmitModal}
         questions={questions}
         answers={answers}
@@ -587,7 +588,7 @@ const QuizAttemptPage: React.FC = () => {
 
       {/* Time Warning (when < 1 minute remaining) */}
       {timeRemaining !== null && (
-        <TimeWarning 
+        <TimeWarning
           timeRemaining={timeRemaining}
           formatTime={formatTime}
         />

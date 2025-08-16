@@ -539,3 +539,34 @@
     padding: 0.2rem 0.6rem;
   }
 }
+
+/* Brand abbreviation styles - Add this to your existing Layout.css */
+
+/* Default: show full brand name, hide abbreviated */
+.brand-full {
+  display: inline;
+}
+
+.brand-abbreviated {
+  display: none;
+}
+
+/* On large screens (1025px and up): show abbreviated, hide full */
+@media (min-width: 1025px) {
+  .brand-full {
+    display: none;
+  }
+  
+  .brand-abbreviated {
+    display: inline;
+  }
+}
+
+/* Optional: Add a subtle transition effect */
+.nav-brand {
+  transition: opacity 0.3s ease;
+}
+
+.nav-brand:hover {
+  opacity: 0.8;
+}
