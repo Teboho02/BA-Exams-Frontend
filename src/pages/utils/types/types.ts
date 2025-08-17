@@ -1,3 +1,4 @@
+// Define a type for the fields that contain arrays of ExpressionNodes
 export type NodeArrayField =
   | 'numerator'
   | 'denominator'
@@ -8,6 +9,18 @@ export type NodeArrayField =
   | 'integrand'
   | 'lowerLimit'
   | 'upperLimit';
+
+export const CHILD_FIELDS: NodeArrayField[] = [
+  'numerator',
+  'denominator',
+  'base',
+  'exponent',
+  'index',
+  'radicand',
+  'integrand',
+  'lowerLimit',
+  'upperLimit',
+];
 
 export interface ExpressionNode {
   id: string;
@@ -24,7 +37,8 @@ export interface ExpressionNode {
   upperLimit?: ExpressionNode[];
 }
 
-export interface EditingContext {
-  nodeId: string;
-  field: NodeArrayField;
+export interface MathSymbolPickerProps {
+  onInsert: (symbol: string, latex: string) => void;
+  onClose: () => void;
+  targetRef?: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>;
 }

@@ -13,7 +13,8 @@ import type { QuizReviewData, StudentAnswer } from './types/TeacherQuizReviewTyp
 // import type { GradeUpdateRequest, GradeUpdateResponse } from  './types/ManualGradingExtensions';
 import './TeacherQuizReviewPage.css';
     
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../../../config/api';
 
 const TeacherQuizReviewPage: React.FC = () => {
     const { quizId } = useParams<{ quizId: string }>();

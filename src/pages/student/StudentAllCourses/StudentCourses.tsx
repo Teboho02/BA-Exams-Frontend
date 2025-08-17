@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../../../components/Layout';
 import { useNavigate } from 'react-router-dom';
 import './StudentCourses.css';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../../../config/api';
 
 // Types based on your API response structure
 interface EnrolledCourse {
@@ -92,20 +93,14 @@ const StudentCourses: React.FC = () => {
       const apiBase = API_BASE_URL;
       const url = `${apiBase}/api/courses/user/enrollments${queryString ? `?${queryString}` : ''}`;
 
-      console.log('Fetching from URL:', url);
 
       // Get token from localStorage - using accessToken
       const token = localStorage.getItem('accessToken');
 
-      console.log('Token exists:', !!token);
-      console.log('Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
-
-      // if (!token) {
-      //   throw new Error('No authentication token found. Please login again.');
-      // }
-
+ 
       const response = await fetch(url, {
         method: 'GET',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
@@ -211,59 +206,12 @@ const StudentCourses: React.FC = () => {
         {/* Header */}
         <div className="header">
           <div className="header-info">
-            <h1 className="page-title">My Courses</h1>
-            <p className="course-count">
+            <h1 className="page-title" style={{margin:10}}>My Courses</h1>
+            <p className="course-count" style={{margin:10}}>
               {courses.length} course{courses.length !== 1 ? 's' : ''} found
             </p>
           </div>
-          <button
-            onClick={fetchEnrolledCourses}
-            className="refresh-btn"
-          >
-            Refresh
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div className="filters-container">
-          <div className="filters-grid">
-            <div className="filter-group">
-              <label htmlFor="status-filter" className="filter-label">
-                Status
-              </label>
-              <select
-                id="status-filter"
-                value={filter.status}
-                onChange={(e) => setFilter(prev => ({
-                  ...prev,
-                  status: e.target.value as typeof filter.status
-                }))}
-                className="filter-select"
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="dropped">Dropped</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </div>
-            <div className="filter-group">
-              <label htmlFor="subject-filter" className="filter-label">
-                Subject
-              </label>
-              <select
-                id="subject-filter"
-                value={filter.subject}
-                onChange={(e) => setFilter(prev => ({ ...prev, subject: e.target.value }))}
-                className="filter-select"
-              >
-                <option value="">All Subjects</option>
-                {uniqueSubjects.map(subject => (
-                  <option key={subject} value={subject}>{subject}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+     
         </div>
 
         {/* Courses Grid */}
@@ -318,28 +266,9 @@ const StudentCourses: React.FC = () => {
                   )}
 
                   {/* Grade Info */}
-                  {(enrollment.grade || enrollment.finalScore !== undefined) && (
-                    <div className="grade-info">
-                      <div className="grade-content">
-                        {enrollment.grade && (
-                          <span className="grade-text">
-                            Grade: {enrollment.grade}
-                          </span>
-                        )}
-                        {enrollment.finalScore !== undefined && (
-                          <span className="score-text">
-                            Score: {enrollment.finalScore}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
+               
 
-                  {/* Enrollment Date */}
-                  <div className="enrollment-date">
-                    Enrolled: {formatDate(enrollment.enrolledAt)}
-                  </div>
-
+              
                   {/* Actions */}
                   <div className="course-actions">
                     <button

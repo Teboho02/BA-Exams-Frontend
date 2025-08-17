@@ -4,8 +4,8 @@ import Layout from '../../components/Layout';
 import CourseForm from '../../components/teacher/CourseForm';
 import type { Course } from '../../types/teacher.types';
 import './TeacherCourses.css';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../../config/api';
 interface ApiCourse {
   id: string;
   title: string;

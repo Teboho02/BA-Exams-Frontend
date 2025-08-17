@@ -4,8 +4,8 @@ import type { StudentReview, Question, Assignment } from '../types/TeacherQuizRe
 import { renderTextWithLatex } from '../utils/renderTextWithLatex';
 import { formatDateTime } from '../utils/helpers';
 import QuestionReview from './QuestionReview';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../../../../config/api';  
 interface StudentDetailModalProps {
     selectedStudentData: StudentReview;
     questions: Question[];

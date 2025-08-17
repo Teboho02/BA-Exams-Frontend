@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import  type { Assignment } from '../types/Assignment';
 import { MathTextArea } from './MathTextArea';
@@ -13,6 +13,13 @@ export const AssignmentDetailsTab: React.FC<AssignmentDetailsTabProps> = ({
   onInputChange
 }) => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
+
+  // Automatically sync availableUntil with dueDate
+  useEffect(() => {
+    if (assignment.dueDate) {
+      onInputChange('availableUntil', assignment.dueDate);
+    }
+  }, [assignment.dueDate, onInputChange]);
 
   return (
     <div className="grid grid-3">
@@ -100,6 +107,13 @@ export const AssignmentDetailsTab: React.FC<AssignmentDetailsTabProps> = ({
               value={assignment.dueDate}
               onChange={(e) => onInputChange('dueDate', e.target.value)}
               className="form-input"
+              style={{ 
+                colorScheme: 'light',
+                backgroundColor: '#ffffff',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
             />
           </div>
 
@@ -110,18 +124,17 @@ export const AssignmentDetailsTab: React.FC<AssignmentDetailsTabProps> = ({
               value={assignment.availableFrom}
               onChange={(e) => onInputChange('availableFrom', e.target.value)}
               className="form-input"
+              style={{ 
+                colorScheme: 'light',
+                backgroundColor: '#ffffff',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px'
+              }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Available Until</label>
-            <input
-              type="datetime-local"
-              value={assignment.availableUntil}
-              onChange={(e) => onInputChange('availableUntil', e.target.value)}
-              className="form-input"
-            />
-          </div>
+          {/* Available Until field is now hidden - it automatically syncs with Due Date */}
         </div>
 
         {/* Quiz Settings */}

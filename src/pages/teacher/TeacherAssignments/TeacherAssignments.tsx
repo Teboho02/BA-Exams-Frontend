@@ -12,7 +12,9 @@ import { AssignmentDetailsTab } from './components/AssignmentDetailsTab';
 import { QuestionsTab } from './components/QuestionsTab';
 import { AssignmentBottomActions } from './components/AssignmentBottomActions';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../../../config/api';
+
 
 const AssignmentCreator: React.FC = () => {
   const { courseId, assignmentId } = useParams<{ courseId: string; assignmentId?: string }>();

@@ -1,4 +1,3 @@
-// components/QuestionsTab.tsx
 import React from 'react';
 import { Plus, HelpCircle, Edit, Trash2 } from 'lucide-react';
 import type { Question, Answer } from '../types/Assignment';

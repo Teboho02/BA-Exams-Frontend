@@ -32,7 +32,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
     code: initialData?.code || '',
     subject: initialData?.subject || 'Mathematics',
     description: initialData?.description || '',
-    maxStudents: initialData?.maxStudents || 50,
+    maxStudents: 999,
     credits: initialData?.credits || 3,
     startDate: initialData?.startDate ? initialData.startDate.toISOString().split('T')[0] : '',
     endDate: initialData?.endDate ? initialData.endDate.toISOString().split('T')[0] : '',
@@ -43,20 +43,8 @@ const CourseForm: React.FC<CourseFormProps> = ({
 
   const subjectOptions = [
     'Mathematics',
-    'Physics',
-    'Chemistry',
+    'Physical Sciences',
     'Life Sciences',
-    'English',
-    'History',
-    'Geography',
-    'Art',
-    'Music',
-    'Physical Education',
-    'Business Studies',
-    'Economics',
-    'Psychology',
-    'Philosophy',
-    'Other'
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -99,7 +87,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
       newErrors.description = 'Course description is required';
     }
 
-    if (formData.maxStudents < 1 || formData.maxStudents > 500) {
+    if (formData.maxStudents < 1 || formData.maxStudents > 1500) {
       newErrors.maxStudents = 'Max students must be between 1 and 500';
     }
 
@@ -163,7 +151,6 @@ const CourseForm: React.FC<CourseFormProps> = ({
                 value={formData.title}
                 onChange={handleChange}
                 className={errors.title ? 'error' : ''}
-                placeholder="e.g., Introduction to Web Development"
                 disabled={isLoading}
               />
               {errors.title && <span className="error-text">{errors.title}</span>}
@@ -219,7 +206,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
             {errors.description && <span className="error-text">{errors.description}</span>}
           </div>
 
-          <div className="form-row">
+          <div className="form-row" style={{ display: 'none' }}>
             <div className="form-group">
               <label htmlFor="maxStudents">Max Students *</label>
               <input
@@ -230,13 +217,13 @@ const CourseForm: React.FC<CourseFormProps> = ({
                 onChange={handleChange}
                 className={errors.maxStudents ? 'error' : ''}
                 min="1"
-                max="500"
+                max="1500"
                 disabled={isLoading}
               />
               {errors.maxStudents && <span className="error-text">{errors.maxStudents}</span>}
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{display:'none'}}>
               <label htmlFor="credits">Credits *</label>
               <input
                 type="number"
@@ -253,7 +240,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row" style={{ display: 'none' }}>
             <div className="form-group">
               <label htmlFor="startDate">Start Date</label>
               <input

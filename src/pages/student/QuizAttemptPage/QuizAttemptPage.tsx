@@ -20,8 +20,8 @@ import TimeWarning from './TimeWarning';
 // Import types
 import type { Assignment, Question, Answer, QuizState } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
+//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../../../config/api';
 const QuizAttemptPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const location = useLocation();
