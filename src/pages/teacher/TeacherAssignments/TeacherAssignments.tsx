@@ -72,115 +72,149 @@ const AssignmentCreator: React.FC = () => {
     return date.toISOString().slice(0, 16);
   };
 
-  const convertBackendQuestionToFrontend = (backendQuestion: any): Question => {
-    const answers: Answer[] = [];
-    
-    if (backendQuestion.questionType === 'multiple_choice' || backendQuestion.questionType === 'true_false') {
-      if (backendQuestion.answers && Array.isArray(backendQuestion.answers)) {
-        backendQuestion.answers.forEach((answer: any, index: number) => {
-          answers.push({
-            id: index + 1,
-            text: answer.text || '',
-            correct: answer.correct || false,
-            feedback: answer.feedback || ''
-          });
-        });
-      }
-      
-      if (answers.length < 2) {
-        answers.push(
-          { id: 1, text: '', correct: true, feedback: '' },
-          { id: 2, text: '', correct: false, feedback: '' }
-        );
-      }
-    }
 
-    return {
-      id: parseInt(backendQuestion.id) || Date.now(),
-      title: backendQuestion.title || `Question ${questions.length + 1}`,
-      type: backendQuestion.questionType || 'multiple_choice',
-      points: backendQuestion.points || 1,
-      text: backendQuestion.questionText || '',
-      answers: answers,
-      imageUrl: backendQuestion.imageUrl || undefined
-    };
+
+  const convertBackendQuestionToFrontend = (backendQuestion: any): Question => {
+  const answers: Answer[] = [];
+  let acceptableAnswers: string[] = [];
+  let matchType: "exact" | "contains" | "regex" | undefined = 'exact';
+  let caseSensitive: boolean = false;
+  
+  if (backendQuestion.questionType === 'multiple_choice' || backendQuestion.questionType === 'true_false') {
+    if (backendQuestion.answers && Array.isArray(backendQuestion.answers)) {
+      backendQuestion.answers.forEach((answer: any, index: number) => {
+        answers.push({
+          id: index + 1,
+          // Fix: Use answerText instead of text, and isCorrect instead of correct
+          text: answer.answerText || answer.text || '',
+          correct: answer.isCorrect !== undefined ? answer.isCorrect : (answer.correct || false),
+          feedback: answer.feedback || ''
+        });
+      });
+    }
+    
+    if (answers.length < 2) {
+      answers.push(
+        { id: 1, text: '', correct: true, feedback: '' },
+        { id: 2, text: '', correct: false, feedback: '' }
+      );
+    }
+  } else if (backendQuestion.questionType === 'short_answer') {
+    // Handle short answer questions
+    acceptableAnswers = backendQuestion.acceptableAnswers || [''];
+    
+    // Ensure matchType is one of the allowed values
+    const backendMatchType = backendQuestion.matchType;
+    if (backendMatchType === 'exact' || backendMatchType === 'contains' || backendMatchType === 'regex') {
+      matchType = backendMatchType;
+    } else {
+      matchType = 'exact'; // default
+    }
+    
+    caseSensitive = backendQuestion.caseSensitive || false;
+    
+    // Ensure at least one acceptable answer exists
+    if (acceptableAnswers.length === 0) {
+      acceptableAnswers = [''];
+    }
+  } else if (backendQuestion.questionType === 'essay') {
+    // Essay questions don't need answers or acceptable answers
+    acceptableAnswers = [];
+  }
+
+  return {
+    id: parseInt(backendQuestion.id) || Date.now(),
+    title: backendQuestion.title || `Question ${questions.length + 1}`,
+    type: backendQuestion.questionType || 'multiple_choice',
+    points: backendQuestion.points || 1,
+    text: backendQuestion.questionText || '',
+    answers: answers,
+    acceptableAnswers: acceptableAnswers,
+    matchType: matchType,
+    caseSensitive: caseSensitive,
+    imageUrl: backendQuestion.imageUrl || undefined
   };
+};
 
   // Load existing assignment data when editing
   useEffect(() => {
+
+    
+
     const loadAssignmentData = async () => {
-      if (!isEditing || !assignmentId) return;
+  if (!isEditing || !assignmentId) return;
 
-      try {
-        setIsLoading(true);
-        setLoadError('');
+  try {
+    setIsLoading(true);
+    setLoadError('');
 
-        const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getAuthToken()}`,
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Unauthorized. Please login again.');
-          }
-          throw new Error('Failed to load assignment data');
-        }
-
-        const data = await response.json();
-        
-        if (data.success && data.assignment) {
-          const assignmentData = data.assignment;
-          
-          setAssignment({
-            title: assignmentData.title || 'Unnamed Quiz',
-            description: assignmentData.description || '',
-            assignmentType: assignmentData.assignment_type || 'quiz',
-            assignmentGroup: assignmentData.assignment_group || 'quizzes',
-            points: assignmentData.max_points || 10,
-            gradingType: assignmentData.grading_type || 'points',
-            submissionTypes:  ['online_quiz'],
-            dueDate: formatDateForInput(assignmentData.due_date),
-            availableFrom: formatDateForInput(assignmentData.available_from),
-            availableUntil: formatDateForInput(assignmentData.available_until),
-            published: assignmentData.is_published || false,
-            allowedAttempts: assignmentData.allowed_attempts || 1,
-            timeLimit: assignmentData.time_limit_minutes ? assignmentData.time_limit_minutes.toString() : '',
-            hasTimeLimit: assignmentData.has_time_limit || false,
-            shuffleAnswers: assignmentData.shuffle_answers || false,
-            showCorrectAnswers: assignmentData.show_correct_answers !== false,
-            multipleAttempts: (assignmentData.allowed_attempts || 1) > 1,
-            oneQuestionAtTime: assignmentData.one_question_at_time || false,
-            cantGoBack: assignmentData.cant_go_back || false,
-            requireAccessCode: !!assignmentData.access_code,
-            accessCode: assignmentData.access_code || '',
-            ipFiltering: assignmentData.ip_filtering || false,
-            ipFilter: assignmentData.ip_filter || '',
-            notifyOfUpdate: false,
-            password: assignmentData.access_code || '',
-            quizInstructions: assignmentData.instructions || ''
-          });
-
-          if (assignmentData.questions && Array.isArray(assignmentData.questions)) {
-            const convertedQuestions = assignmentData.questions.map(convertBackendQuestionToFrontend);
-            setQuestions(convertedQuestions);
-          }
-
-        } else {
-          throw new Error('Invalid assignment data received');
-        }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load assignment';
-        setLoadError(errorMessage);
-        console.error('Error loading assignment:', err);
-      } finally {
-        setIsLoading(false);
+    const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Accept': 'application/json'
       }
-    };
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Unauthorized. Please login again.');
+      }
+      throw new Error('Failed to load assignment data');
+    }
+
+    const data = await response.json();
+    
+    if (data.success && data.assignment) {
+      const assignmentData = data.assignment;
+      
+      setAssignment({
+        title: assignmentData.title || 'Unnamed Quiz',
+        description: assignmentData.description || '',
+        assignmentType: assignmentData.assignmentType || 'quiz',
+        assignmentGroup: assignmentData.assignmentGroup || 'quizzes',
+        points: assignmentData.maxPoints || 10,
+        gradingType: assignmentData.gradingType || 'points',
+        submissionTypes: assignmentData.submissionTypes || ['online_quiz'],
+        dueDate: formatDateForInput(assignmentData.dueDate),
+        availableFrom: formatDateForInput(assignmentData.availableFrom),
+        availableUntil: formatDateForInput(assignmentData.availableUntil),
+        published: assignmentData.isPublished || false,
+        allowedAttempts: assignmentData.allowedAttempts || 1,
+        timeLimit: assignmentData.timeLimitMinutes ? assignmentData.timeLimitMinutes.toString() : '',
+        hasTimeLimit: assignmentData.hasTimeLimit || false,
+        shuffleAnswers: assignmentData.shuffleAnswers || false,
+        showCorrectAnswers: assignmentData.showCorrectAnswers !== false,
+        multipleAttempts: (assignmentData.allowedAttempts || 1) > 1,
+        oneQuestionAtTime: assignmentData.oneQuestionAtTime || false,
+        cantGoBack: assignmentData.cantGoBack || false,
+        requireAccessCode: !!assignmentData.accessCode,
+        accessCode: assignmentData.accessCode || '',
+        ipFiltering: assignmentData.ipFiltering || false,
+        ipFilter: assignmentData.ipFilter || '',
+        notifyOfUpdate: false,
+        password: assignmentData.accessCode || '',
+        quizInstructions: assignmentData.instructions || assignmentData.quizInstructions || ''
+      });
+
+      if (data.questions && Array.isArray(data.questions)) {
+        const convertedQuestions = data.questions.map(convertBackendQuestionToFrontend);
+        setQuestions(convertedQuestions);
+      }
+
+    } else {
+      throw new Error('Invalid assignment data received');
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Failed to load assignment';
+    setLoadError(errorMessage);
+    console.error('Error loading assignment:', err);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
     loadAssignmentData();
   }, [isEditing, assignmentId]);

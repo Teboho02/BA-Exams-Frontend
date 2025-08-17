@@ -1,4 +1,3 @@
-// components/AssignmentDetailsTab.tsx
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import  type { Assignment } from '../types/Assignment';

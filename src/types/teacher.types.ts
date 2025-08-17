@@ -11,8 +11,8 @@ export interface Course {
   startDate: Date;
   endDate: Date;
   createdAt: Date;
-  // Added missing properties
   maxStudents?: number;
+  enrolledStudents?: any[]
   credits?: number;
   currentEnrollment?: number;
 }
