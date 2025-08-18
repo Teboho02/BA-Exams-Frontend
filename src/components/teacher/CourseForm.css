@@ -175,7 +175,6 @@ body {
 
 /* Number inputs */
 .form-group input[type="number"] {
-  -moz-appearance: textfield;
 }
 
 .form-group input[type="number"]::-webkit-outer-spin-button,

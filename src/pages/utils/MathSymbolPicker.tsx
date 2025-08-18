@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { ExpressionNode, NodeArrayField, MathSymbolPickerProps } from './types/types';
-import { updateContentById, removeNodeById, insertChildNode } from './utils/utils';
+import { updateContentById, removeNodeById } from './utils/utils';
 import VisualBuilder from './VisualBuilder';
 import SymbolPicker from './SymbolPicker';
 import CustomLatex from './CustomLatex';

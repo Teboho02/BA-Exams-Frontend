@@ -1,4 +1,3 @@
-// components/QuestionEditor.tsx
 import React from 'react';
 import { Plus, Trash2, Image, X } from 'lucide-react';
 import type { Question, Answer } from '../types/Assignment';

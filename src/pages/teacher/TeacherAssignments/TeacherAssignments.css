@@ -3,6 +3,8 @@
 .assignment-creator {
   min-height: 100vh;
   background: #f8fafc;
+  width: 100%; /* Ensure proper width */
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 /* Header Styles */

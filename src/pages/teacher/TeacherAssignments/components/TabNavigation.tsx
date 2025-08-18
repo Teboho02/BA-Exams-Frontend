@@ -13,7 +13,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
   questionCount
 }) => {
   return (
-    <div className="tabs">
+    <div className="tabs" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', maxWidth: '800px', margin: '0' }}>
       <nav className="tab-nav">
         <button
           onClick={() => onTabChange('details')}
