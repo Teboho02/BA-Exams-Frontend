@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Layout.css';
 import { API_BASE_URL } from '../config/api'; 
+
 interface LayoutProps {
   children: React.ReactNode;
   role: 'admin' | 'teacher' | 'student';
@@ -38,7 +39,7 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
     
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(API_BASE_URL+'/api/courses/registration-requests', {
+      const response = await fetch(`${API_BASE_URL}/api/courses/registration-requests`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -46,17 +47,27 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
       });
       
       if (response.ok) {
-        const requests = await response.json();
+        const data = await response.json();
+        // Ensure we always get an array
+        const requests = Array.isArray(data) ? data : [];
         setRegistrationRequests(requests);
         
-        // Count unread requests (assuming you have a mechanism to track read status)
+        // Count unread requests
         const unread = requests.filter((req: RegistrationRequest) => 
           !localStorage.getItem(`request_read_${req.id}`)
         );
         setUnreadCount(unread.length);
+      } else {
+        console.error('Failed to fetch registration requests:', response.statusText);
+        // Set to empty array on error to prevent crashes
+        setRegistrationRequests([]);
+        setUnreadCount(0);
       }
     } catch (error) {
       console.error('Error fetching registration requests:', error);
+      // Set to empty array on error to prevent crashes
+      setRegistrationRequests([]);
+      setUnreadCount(0);
     }
   };
 
@@ -64,7 +75,8 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
   const handleRegistrationAction = async (requestId: string, action: 'approve' | 'reject') => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/teacher/registration-requests/${requestId}/${action}`, {
+      // Fixed the API endpoint to match the fetch endpoint pattern
+      const response = await fetch(`${API_BASE_URL}/api/teacher/registration-requests/${requestId}/${action}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -79,8 +91,10 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
         
         // Show success message
         const message = action === 'approve' ? 'Student approved successfully!' : 'Student request rejected.';
-        // You can implement a toast notification system here
         console.log(message);
+        // You can implement a toast notification system here
+      } else {
+        console.error(`Failed to ${action} registration request:`, response.statusText);
       }
     } catch (error) {
       console.error(`Error ${action}ing registration request:`, error);
@@ -159,13 +173,15 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
   };
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  
   const toggleNotifications = () => {
     setShowNotifications(!showNotifications);
-    if (!showNotifications) {
+    if (!showNotifications && Array.isArray(registrationRequests)) {
       // Mark all as read when opening notifications
       registrationRequests.forEach(req => markAsRead(req.id));
     }
   };
+  
   const goBack = () => navigate(-1);
 
   if (isLoading) {
@@ -234,7 +250,7 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
                     <h4>Registration Requests</h4>
                   </div>
                   <div className="notifications-content">
-                    {registrationRequests.length === 0 ? (
+                    {!Array.isArray(registrationRequests) || registrationRequests.length === 0 ? (
                       <div className="no-notifications">
                         No pending registration requests
                       </div>
@@ -291,8 +307,6 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
         </div>
       </nav>
       <div className="content">{children}</div>
-      
-    
     </div>
   );
 };
