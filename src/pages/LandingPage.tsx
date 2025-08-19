@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LandingPage.css'
- import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '../config/api';
 
 interface LoginForm {
   email: string;
@@ -19,8 +19,6 @@ interface LoginResponse {
     role: 'admin' | 'teacher' | 'student';
     isActive: boolean;
   };
-  accessToken?: string;
-  refreshToken?: string;
   errors?: any[];
 }
 
@@ -49,8 +47,8 @@ const LandingPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch(API_BASE_URL+'/api/auth/login', {
-        credentials: 'include',
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        credentials: 'include', // This is important for cookies
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,11 +58,11 @@ const LandingPage: React.FC = () => {
 
       const data: LoginResponse = await response.json();
 
-      console.log("The respose/ data is: ", data);
+      console.log("The response/data is: ", data);
 
       if (data.success && data.user) {
+        // Save user data to localStorage (tokens are already in httpOnly cookies)
         localStorage.setItem('user', JSON.stringify(data.user));
-
 
         console.log("User data saved to localStorage:", data.user); 
 
@@ -168,8 +166,6 @@ const LandingPage: React.FC = () => {
               Register here
             </button>
           </p>
-          
-      
         </div>
       </div>
     </div>

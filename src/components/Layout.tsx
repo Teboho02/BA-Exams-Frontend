@@ -164,7 +164,17 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+
+    const url = API_BASE_URL + '/api/auth/logout';
+    await fetch(url, {
+      method: 'POST',
+      credentials: 'include', // important to send cookies
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
     clearAuthStorage();
     setIsAuthenticated(false);
     navigate('/login', { replace: true });
