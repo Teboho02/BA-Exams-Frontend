@@ -303,7 +303,6 @@ const handleRegistrationAction = async (requestId: string, action: 'approve' | '
                             <div className="notification-details">
                               <span>{request.studentEmail}</span>
                               <br />
-                              <span>Course: {request.courseName}</span>
                               <br />
                               <small>{new Date(request.requestedAt).toLocaleString()}</small>
                             </div>
