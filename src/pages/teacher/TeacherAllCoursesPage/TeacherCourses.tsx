@@ -688,12 +688,7 @@ const handleCreateCourse = async (courseData: Omit<Course, 'id' | 'teacherId' | 
               <div className="course-meta">
                 <span>👥 {course.students.length} students</span>
                 <span>📚 {course.subject}</span>
-                {course.maxStudents && (
-                  <span>🎯 Max: {course.maxStudents}</span>
-                )}
-                {course.credits && (
-                  <span>⭐ {course.credits} credits</span>
-                )}
+           
               </div>
               <div className="course-dates">
                 <span>📅 Start: {course.startDate.toLocaleDateString()}</span>
