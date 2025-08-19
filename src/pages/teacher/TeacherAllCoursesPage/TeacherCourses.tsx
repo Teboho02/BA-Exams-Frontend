@@ -131,11 +131,6 @@ const TeacherCourses: React.FC = () => {
         },
       });
 
-      if (response.status === 401) {
-        localStorage.clear();
-        navigate('/login');
-        return;
-      }
 
       const data: ApiResponse = await response.json();
 
@@ -202,12 +197,6 @@ const TeacherCourses: React.FC = () => {
         body: JSON.stringify(apiCourseData),
       });
 
-      if (response.status === 401) {
-        localStorage.clear();
-        navigate('/login');
-        return;
-      }
-
       const data: ApiResponse = await response.json();
 
       if (data.success && data.course) {
@@ -260,11 +249,7 @@ const TeacherCourses: React.FC = () => {
         body: JSON.stringify({ email })
       });
 
-      if (response.status === 401) {
-        localStorage.clear();
-        navigate('/login');
-        return;
-      }
+  
 
       const data = await response.json();
 
@@ -327,12 +312,6 @@ const TeacherCourses: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-
-      if (response.status === 401) {
-        localStorage.clear();
-        navigate('/login');
-        return;
-      }
 
       const data = await response.json();
 
