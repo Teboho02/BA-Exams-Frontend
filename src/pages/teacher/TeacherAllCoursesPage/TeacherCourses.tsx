@@ -166,71 +166,85 @@ const TeacherCourses: React.FC = () => {
   };
 
   // Create new course
-  const handleCreateCourse = async (courseData: Omit<Course, 'id' | 'teacherId' | 'students' | 'createdAt'>) => {
-    try {
-      setCreating(true);
-      setError('');
+const handleCreateCourse = async (courseData: Omit<Course, 'id' | 'teacherId' | 'students' | 'createdAt'>) => {
+  try {
+    setCreating(true);
+    setError('');
 
-      // Set automatic values
-      const today = new Date();
-      const endOfYear = getEndOfYear();
-      const autoCode = generateCourseCode(courseData.title, courseData.subject);
+    // Set automatic values
+    const today = new Date();
+    const endOfYear = getEndOfYear();
+    const autoCode = generateCourseCode(courseData.title, courseData.subject);
 
-      // Prepare data for API with automatic values
-      const apiCourseData = {
-        title: courseData.title,
-        code: autoCode, // Auto-generated
-        subject: courseData.subject,
-        description: courseData.description,
-        maxStudents: 999, // Always 999
-        credits: 3, // Always 3
-        startDate: today.toISOString(), // Today's date
-        endDate: endOfYear.toISOString(), // Last day of year
+    // Prepare data for API with automatic values
+    const apiCourseData = {
+      title: courseData.title,
+      code: autoCode, // Auto-generated
+      subject: courseData.subject,
+      description: courseData.description,
+      maxStudents: 999, // Always 999
+      credits: 3, // Always 3
+      startDate: today.toISOString(), // Today's date
+      endDate: endOfYear.toISOString(), // Last day of year
+    };
+
+    const response = await fetch(API_BASE_URL+'/api/courses', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiCourseData),
+    });
+
+    const data: ApiResponse = await response.json();
+
+    if (data.success && data.course) {
+      // Get the current user's ID from existing courses or use a placeholder
+      // Since the API doesn't return teacher info, we'll handle it gracefully
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      let teacherId = user.id // Default fallback
+      
+      // Try to get teacher ID from existing courses if available
+      if (courses.length > 0) {
+        teacherId = courses[0].teacherId;
+      }
+
+      const newCourse: Course = {
+        id: data.course.id,
+        title: data.course.title,
+        description: data.course.description,
+        code: data.course.code,
+        subject: data.course.subject || 'General',
+        teacherId: teacherId, // Use fallback or existing teacher ID
+        students: [],
+        enrolledStudents: [],
+        isActive: data.course.isActive,
+        startDate: today,
+        endDate: endOfYear,
+        createdAt: new Date(data.course.createdAt),
+        maxStudents: 999,
+        credits: 3,
+        currentEnrollment: 0
       };
 
-      const response = await fetch(API_BASE_URL+'/api/courses', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiCourseData),
-      });
-
-      const data: ApiResponse = await response.json();
-
-      if (data.success && data.course) {
-        const newCourse: Course = {
-          id: data.course.id,
-          title: data.course.title,
-          description: data.course.description,
-          code: data.course.code,
-          subject: data.course.subject || 'General',
-          teacherId: data.course.teacher.id,
-          students: [],
-          enrolledStudents: [],
-          isActive: data.course.isActive,
-          startDate: today,
-          endDate: endOfYear,
-          createdAt: new Date(data.course.createdAt),
-          maxStudents: 999,
-          credits: 3,
-          currentEnrollment: 0
-        };
-
-        setCourses(prev => [newCourse, ...prev]);
-        setShowForm(false);
-        console.log('Course created successfully!');
-      } else {
-        setError(data.message || 'Failed to create course');
-      }
-    } catch (err) {
-      console.error('Error creating course:', err);
-      setError('Network error. Please try again.');
-    } finally {
-      setCreating(false);
+      setCourses(prev => [newCourse, ...prev]);
+      setShowForm(false);
+      
+      // Show success message instead of console.log
+      // You might want to add a success state to show user feedback
+      console.log('Course created successfully!');
+      
+    } else {
+      setError(data.message || 'Failed to create course');
     }
-  };
+  } catch (err) {
+    console.error('Error creating course:', err);
+    setError('Network error. Please try again.');
+  } finally {
+    setCreating(false);
+  }
+};
 
   // Enroll student by email
   const handleEnrollStudent = async (courseId: string, email: string) => {
