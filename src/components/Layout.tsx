@@ -28,7 +28,6 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
 
   // Clear all stored auth info
   const clearAuthStorage = () => {
-    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     sessionStorage.clear();
   };
@@ -105,29 +104,31 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
   };
 
   useEffect(() => {
+
     const checkAuth = () => {
-      const accessToken = localStorage.getItem('accessToken');
-      const user = localStorage.getItem('user');
+  const user = localStorage.getItem('user');
 
-      if (!accessToken || !user) {
-        setIsAuthenticated(false);
-        clearAuthStorage();
-        navigate('/login', { replace: true });
-        return;
-      }
+  // Only check for user data, not accessToken since we're using cookies
+  if (!user) {
+    setIsAuthenticated(false);
+    clearAuthStorage();
+    navigate('/', { replace: true }); // Navigate to root instead of /login
+    return;
+  }
 
-      try {
-        const userData = JSON.parse(user);
-        if (!userData.id || !userData.role) {
-          throw new Error('Invalid user data');
-        }
-        setIsAuthenticated(true);
-      } catch (err) {
-        console.error('Error parsing user data:', err);
-        clearAuthStorage();
-        navigate('/login', { replace: true });
-      }
-    };
+  try {
+    const userData = JSON.parse(user);
+    if (!userData.id || !userData.role) {
+      throw new Error('Invalid user data');
+    }
+    console.log("✅ User authenticated via Layout:", userData);
+    setIsAuthenticated(true);
+  } catch (err) {
+    console.error('Error parsing user data:', err);
+    clearAuthStorage();
+    navigate('/', { replace: true }); // Navigate to root instead of /login
+  }
+};
 
     checkAuth();
     setIsLoading(false);
