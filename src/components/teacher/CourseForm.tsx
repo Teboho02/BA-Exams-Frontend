@@ -29,7 +29,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<FormData>({
     title: initialData?.title || '',
-    code: initialData?.code || '',
+    code: initialData?.code || 'MT100',
     subject: initialData?.subject || 'Mathematics',
     description: initialData?.description || '',
     maxStudents: 999,
@@ -156,7 +156,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
               {errors.title && <span className="error-text">{errors.title}</span>}
             </div>
 
-            <div className="form-group">
+            <div className="form-group" style={{ display: 'none' }}>
               <label htmlFor="code">Course Code *</label>
               <input
                 type="text"
