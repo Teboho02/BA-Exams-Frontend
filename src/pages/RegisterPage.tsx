@@ -67,11 +67,8 @@ const RegisterPage: React.FC = () => {
 
       if (data.success && data.user) {
         // For registration, tokens are returned in response body
-        if (data.accessToken) {
-          localStorage.setItem('accessToken', data.accessToken);
-          localStorage.setItem('refreshToken', data.refreshToken || '');
-        }
-        localStorage.setItem('user', JSON.stringify(data.user));
+      
+        navigate('/login');
 
         // Navigate based on user role
         switch (data.user.role) {
