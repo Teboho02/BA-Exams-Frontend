@@ -8,14 +8,23 @@ interface LayoutProps {
   role: 'admin' | 'teacher' | 'student';
 }
 
+
+
 interface RegistrationRequest {
   id: string;
   studentName: string;
   studentEmail: string;
-  courseName: string;
-  courseId: string;
+  courseTitle: string;  // API uses courseTitle, not courseName
+  courseCode: string;   // API includes courseCode
+  courseSubject: string; // API includes courseSubject
+  status: string;       // API includes status
   requestedAt: string;
+  processedAt?: string | null;
+  notes?: string | null;
+  rejectionReason?: string | null;
 }
+
+
 
 const Layout: React.FC<LayoutProps> = ({ children, role }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,69 +42,93 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
   };
 
   // Fetch registration requests for teachers
-  const fetchRegistrationRequests = async () => {
-    if (role !== 'teacher') return;
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/courses/registration-requests`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Ensure we always get an array
-        const requests = Array.isArray(data) ? data : [];
-        setRegistrationRequests(requests);
-        
-        // Count unread requests
-        const unread = requests.filter((req: RegistrationRequest) => 
-          !localStorage.getItem(`request_read_${req.id}`)
-        );
-        setUnreadCount(unread.length);
-      } else {
-        console.error('Failed to fetch registration requests:', response.statusText);
-        // Set to empty array on error to prevent crashes
-        setRegistrationRequests([]);
-        setUnreadCount(0);
+const fetchRegistrationRequests = async () => {
+  if (role !== 'teacher') return;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/courses/registration-requests`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
       }
-    } catch (error) {
-      console.error('Error fetching registration requests:', error);
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Handle the API response structure correctly
+      // API returns: { success: true, count: 1, requests: [...] }
+      const requests = Array.isArray(data.requests) ? data.requests : [];
+      setRegistrationRequests(requests);
+      
+      // Count unread requests
+      const unread = requests.filter((req: RegistrationRequest) => 
+        !localStorage.getItem(`request_read_${req.id}`)
+      );
+      setUnreadCount(unread.length);
+    } else {
+      console.error('Failed to fetch registration requests:', response.statusText);
       // Set to empty array on error to prevent crashes
       setRegistrationRequests([]);
       setUnreadCount(0);
     }
-  };
-
+  } catch (error) {
+    console.error('Error fetching registration requests:', error);
+    // Set to empty array on error to prevent crashes
+    setRegistrationRequests([]);
+    setUnreadCount(0);
+  }
+};
   // Handle approval/rejection of registration requests
-  const handleRegistrationAction = async (requestId: string, action: 'approve' | 'reject') => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/teacher/registration-requests/${requestId}/${action}`, {
-        credentials: 'include',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+
+// Fixed handleRegistrationAction function to match the backend API
+const handleRegistrationAction = async (requestId: string, action: 'approve' | 'reject') => {
+  try {
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    
+    const response = await fetch(`${API_BASE_URL}/api/courses/registration-requests/${requestId}`, {
+      credentials: 'include',
+      method: 'PUT', // Changed from POST to PUT
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        status: status,
+        notes: null, // You can add notes if needed
+        rejectionReason: action === 'reject' ? 'Rejected by teacher' : null // Optional rejection reason
+      })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
       
-      if (response.ok) {
-        // Remove the request from the list
-        setRegistrationRequests(prev => prev.filter(req => req.id !== requestId));
-        setUnreadCount(prev => Math.max(0, prev - 1));
-        
-        // Show success message
-        const message = action === 'approve' ? 'Student approved successfully!' : 'Student request rejected.';
-        console.log(message);
-        // You can implement a toast notification system here
-      } else {
-        console.error(`Failed to ${action} registration request:`, response.statusText);
-      }
-    } catch (error) {
-      console.error(`Error ${action}ing registration request:`, error);
+      // Remove the request from the list
+      setRegistrationRequests(prev => prev.filter(req => req.id !== requestId));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Show success message (you can implement a toast notification system)
+      const message = result.message || (action === 'approve' ? 'Student approved successfully!' : 'Student request rejected.');
+      console.log(message);
+      
+      // Optional: You could show a toast notification here
+      // toast.success(message);
+      
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.message || `Failed to ${action} registration request`;
+      console.error(errorMessage, response.statusText);
+      
+      // Optional: You could show an error toast here
+      // toast.error(errorMessage);
     }
-  };
+  } catch (error) {
+    console.error(`Error ${action}ing registration request:`, error);
+    
+    // Optional: You could show an error toast here
+    // toast.error(`Network error while ${action}ing request`);
+  }
+};
+
 
   // Mark notification as read
   const markAsRead = (requestId: string) => {
