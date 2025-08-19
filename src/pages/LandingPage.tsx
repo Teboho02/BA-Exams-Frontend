@@ -60,8 +60,11 @@ const LandingPage: React.FC = () => {
 
       const data: LoginResponse = await response.json();
 
+      console.log("The respose/ data is: ", data);
+
       if (data.success && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
+
 
         // Navigate based on user role
         switch (data.user.role) {

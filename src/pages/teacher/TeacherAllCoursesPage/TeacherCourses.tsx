@@ -274,7 +274,7 @@ const TeacherCourses: React.FC = () => {
 
   // Show student list modal
   const handleViewStudents = (course: Course) => {
-    setStudentModal({
+    setStudentModal({ 
       courseId: course.id,
       courseName: course.title,
       students: course.enrolledStudents || [],
