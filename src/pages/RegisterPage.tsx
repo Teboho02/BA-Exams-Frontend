@@ -55,6 +55,7 @@ const RegisterPage: React.FC = () => {
 
     try {
       const response = await fetch(API_BASE_URL + '/api/auth/register', {
+        credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

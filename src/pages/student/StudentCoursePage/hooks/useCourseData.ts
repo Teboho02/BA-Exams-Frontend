@@ -39,22 +39,15 @@ export const useCourseData = (courseId: string | undefined) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
-  const getAuthToken = () => {
-    return localStorage.getItem('accessToken');
-  };
+
 
   const fetchAssignments = async (courseId: string) => {
     try {
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
 
       const response = await fetch(`${API_BASE_URL}/api/assignments/course/${courseId}`, {
+        credentials: 'include',
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -87,16 +80,12 @@ export const useCourseData = (courseId: string | undefined) => {
       setLoading(true);
       setError('');
 
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+
 
       const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}`, {
+        credentials: 'include',
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });

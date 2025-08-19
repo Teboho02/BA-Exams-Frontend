@@ -71,10 +71,10 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         try {
             // Call the new API endpoint to save the grade
             const response = await fetch(API_BASE_URL + `/api/quiz/submissions/${selectedStudentData.submission?.id}/questions/${questionId}/grade`, {
+                credentials: 'include',
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 },
                 body: JSON.stringify({
                     points: grading.points

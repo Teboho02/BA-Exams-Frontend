@@ -59,14 +59,6 @@ const AssignmentCreator: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(isEditing);
   const [loadError, setLoadError] = useState<string>('');
 
-  // Helper functions
-  const getAuthToken = () => {
-    return localStorage.getItem('accessToken') || 
-           sessionStorage.getItem('accessToken') || 
-           localStorage.getItem('token') || 
-           sessionStorage.getItem('token') || 
-           '';
-  };
 
   const formatDateForInput = (dateString: string | null) => {
     if (!dateString) return '';
@@ -151,10 +143,10 @@ const AssignmentCreator: React.FC = () => {
     setLoadError('');
 
     const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
+      credentials: 'include',
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`,
         'Accept': 'application/json'
       }
     });
@@ -453,10 +445,10 @@ const AssignmentCreator: React.FC = () => {
 
       // Make the API call
       const response = await fetch(url, {
+        credentials: 'include',
         method: method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`,
           'Accept': 'application/json'
         },
         body: JSON.stringify(payload)

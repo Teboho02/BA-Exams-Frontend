@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { QuizReviewData, QuizDetails } from './types/quiz';
-import { calculateGradingStats, getAuthToken } from './utils/quizUtils';
+import { calculateGradingStats } from './utils/quizUtils';
 import { fetchQuizReviewData } from './services/quizApi';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorState from './components/ErrorState';
@@ -26,12 +26,7 @@ const StudentQuizReview: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+
 
       console.log("the submissionID is", submissionId);
 
@@ -40,7 +35,7 @@ const StudentQuizReview: React.FC = () => {
         return;
       }
 
-      const data = await fetchQuizReviewData(submissionId, token);
+      const data = await fetchQuizReviewData(submissionId);
 
       console.log("Fetched quiz review data:", data);
       

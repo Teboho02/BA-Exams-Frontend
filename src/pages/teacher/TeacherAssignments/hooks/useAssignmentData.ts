@@ -13,13 +13,6 @@ interface UseAssignmentDataReturn {
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
 }
 
-const getAuthToken = () => {
-  return localStorage.getItem('accessToken') || 
-         sessionStorage.getItem('accessToken') || 
-         localStorage.getItem('token') || 
-         sessionStorage.getItem('token') || 
-         '';
-};
 
 const formatDateForInput = (dateString: string | null) => {
   if (!dateString) return '';
@@ -110,10 +103,10 @@ export const useAssignmentData = (
         setLoadError('');
 
         const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
+          credentials: 'include',
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getAuthToken()}`,
             'Accept': 'application/json'
           }
         });

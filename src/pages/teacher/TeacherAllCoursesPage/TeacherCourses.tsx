@@ -97,10 +97,7 @@ const TeacherCourses: React.FC = () => {
     courseId: null
   });
 
-  // Get auth token from localStorage
-  const getAuthToken = () => {
-    return localStorage.getItem('accessToken');
-  };
+
 
   // Generate automatic course code
   const generateCourseCode = (title: string, subject: string) => {
@@ -124,17 +121,12 @@ const TeacherCourses: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
 
       const response = await fetch(API_BASE_URL+'/api/courses', {
+        credentials: 'include',
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+      //    'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -184,12 +176,6 @@ const TeacherCourses: React.FC = () => {
       setCreating(true);
       setError('');
 
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
       // Set automatic values
       const today = new Date();
       const endOfYear = getEndOfYear();
@@ -209,8 +195,8 @@ const TeacherCourses: React.FC = () => {
 
       const response = await fetch(API_BASE_URL+'/api/courses', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(apiCourseData),
@@ -263,16 +249,12 @@ const TeacherCourses: React.FC = () => {
       setEnrollmentError('');
       setEnrollmentLoading(true);
       
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+   
 
       const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/enroll/email`, {
+        credentials: 'include',
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email })
@@ -336,16 +318,12 @@ const TeacherCourses: React.FC = () => {
     try {
       setRemovingStudents(prev => new Set(prev).add(studentId));
       
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+
 
       const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/unenroll/${studentId}`, {
+        credentials: 'include',
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });

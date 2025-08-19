@@ -24,6 +24,3 @@ export const calculateGradingStats = (questions: QuizQuestion[], quizDetails: Qu
   };
 };
 
-export const getAuthToken = (): string | null => {
-  return localStorage.getItem('accessToken');
-};

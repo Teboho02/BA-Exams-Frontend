@@ -3,11 +3,11 @@ import type { QuizReviewData } from '../types/quiz';
 // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import { API_BASE_URL } from '../../../../config/api';
 
-export const fetchQuizReviewData = async (submissionId: string, token: string): Promise<QuizReviewData> => {
+export const fetchQuizReviewData = async (submissionId: string): Promise<QuizReviewData> => {
   const response = await fetch(`${API_BASE_URL}/api/assignments/submission/${submissionId}/results`, {
+    credentials: 'include',
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   });

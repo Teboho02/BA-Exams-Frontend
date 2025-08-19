@@ -38,10 +38,9 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
     if (role !== 'teacher') return;
     
     try {
-      const token = localStorage.getItem('accessToken');
       const response = await fetch(`${API_BASE_URL}/api/courses/registration-requests`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -74,12 +73,10 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
   // Handle approval/rejection of registration requests
   const handleRegistrationAction = async (requestId: string, action: 'approve' | 'reject') => {
     try {
-      const token = localStorage.getItem('accessToken');
-      // Fixed the API endpoint to match the fetch endpoint pattern
       const response = await fetch(`${API_BASE_URL}/api/teacher/registration-requests/${requestId}/${action}`, {
+        credentials: 'include',
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });

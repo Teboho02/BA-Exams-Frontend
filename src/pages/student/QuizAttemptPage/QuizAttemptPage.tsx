@@ -49,10 +49,7 @@ const QuizAttemptPage: React.FC = () => {
   const [canRetake, setCanRetake] = useState<boolean>(quizState?.canRetake || false);
   const [submission, setSubmission] = useState<any>(quizState?.submission || null);
 
-  // Get auth token
-  const getAuthToken = () => {
-    return localStorage.getItem('accessToken');
-  };
+
 
   // localStorage functions
   const saveAnswersToStorage = useCallback((answers: Answer[], assignmentId: string, timeRemaining?: number | null, startTime?: Date) => {
@@ -141,16 +138,11 @@ const QuizAttemptPage: React.FC = () => {
       setLoading(true);
       setError('');
 
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
 
       const response = await fetch(API_BASE_URL + `/api/assignments/${assignmentId}`, {
+        credentials: 'include',
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -370,11 +362,7 @@ const QuizAttemptPage: React.FC = () => {
     try {
       setIsSubmitting(true);
 
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
+   
 
       // Convert answers to the format expected by API
       const submissionAnswers: { [questionId: string]: any } = {};
@@ -388,9 +376,9 @@ const QuizAttemptPage: React.FC = () => {
       });
 
       const response = await fetch(API_BASE_URL + `/api/assignments/${assignmentId}/submit`, {
+        credentials: 'include',
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

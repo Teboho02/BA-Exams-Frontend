@@ -50,7 +50,7 @@ const LandingPage: React.FC = () => {
 
     try {
       const response = await fetch(API_BASE_URL+'/api/auth/login', {
-        
+        credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

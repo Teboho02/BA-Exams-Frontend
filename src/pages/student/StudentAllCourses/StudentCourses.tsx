@@ -102,21 +102,15 @@ const StudentCourses: React.FC = () => {
       const queryString = params.toString();
       const apiBase = API_BASE_URL;
       const url = `${apiBase}/api/courses/user/enrollments${queryString ? `?${queryString}` : ''}`;
-      const token = localStorage.getItem('accessToken');
 
       const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
       });
 
-      if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        throw new Error('Authentication expired. Please login again.');
-      }
 
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
@@ -150,14 +144,12 @@ const StudentCourses: React.FC = () => {
   const fetchRegistrationRequests = async () => {
     try {
       setError(null);
-      const token = localStorage.getItem('accessToken');
       
       const response = await fetch(`${API_BASE_URL}/api/courses/my-requests`, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
       });
 

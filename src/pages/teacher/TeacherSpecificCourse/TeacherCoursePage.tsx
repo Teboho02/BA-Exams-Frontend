@@ -49,25 +49,16 @@ const TeacherCoursePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isStudentView, setIsStudentView] = useState(false);
 
-  // Helper function to get auth token from localStorage or sessionStorage
-  const getAuthToken = () => {
-    // Try different possible token key names
-    return localStorage.getItem('accessToken') || 
-           sessionStorage.getItem('accessToken') || 
-           localStorage.getItem('token') || 
-           sessionStorage.getItem('token') || 
-           '';
-  };
 
   useEffect(() => {
     const fetchAssignments = async () => {
       try {
         setLoading(true);
         const response = await fetch(API_BASE_URL+`/api/assignments/course/${courseId}`, {
+          credentials: 'include',
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getAuthToken()}`,
             'Accept': 'application/json'
           }
         });
@@ -351,10 +342,10 @@ const handleAssignmentClick = (assignment: Assignment) => {
                               // Handle publish action
                               console.log('Publishing assignment:', assignment.id);
                               fetch(`${API_BASE_URL}/api/assignments/${assignment.id}/publish`, {
+                                credentials: 'include',
                                 method: 'PATCH',
                                 headers: {
                                   'Content-Type': 'application/json',
-                                  'Authorization': `Bearer ${getAuthToken()}`
                                 }
                               })
                                 .then(res => res.json())

@@ -31,9 +31,9 @@ const TeacherQuizReviewPage: React.FC = () => {
             try {
                 setLoading(true);
                 const response = await fetch(API_BASE_URL+`/api/teacher-review/${quizId}`, {
+                    credentials: 'include',
                     method: 'GET',
                     headers: {
-                        Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
                         'Content-Type': 'application/json',
                     },
                 });

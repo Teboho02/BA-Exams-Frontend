@@ -51,10 +51,7 @@ const TeacherCourses: React.FC = () => {
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState('');
 
-  // Get auth token from localStorage
-  const getAuthToken = () => {
-    return localStorage.getItem('accessToken');
-  };
+
 
   // Fetch courses from API
   const fetchCourses = async () => {
@@ -62,16 +59,11 @@ const TeacherCourses: React.FC = () => {
       setLoading(true);
       setError('');
       
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
+ 
       const response = await fetch(API_BASE_URL+'/api/courses', {
+        credentials: 'include',
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -120,11 +112,6 @@ const TeacherCourses: React.FC = () => {
       setCreating(true);
       setError('');
 
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
 
       // Prepare data for API
       const apiCourseData = {
@@ -139,9 +126,9 @@ const TeacherCourses: React.FC = () => {
       };
 
       const response = await fetch(API_BASE_URL+'/api/courses', {
+        credentials: 'include',
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(apiCourseData),
@@ -193,16 +180,11 @@ const TeacherCourses: React.FC = () => {
       setEnrollmentError('');
       setEnrollmentLoading(true);
       
-      const token = getAuthToken();
-      if (!token) {
-        navigate('/login');
-        return;
-      }
 
       const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/enroll/email`, {
+        credentials: 'include',
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email })

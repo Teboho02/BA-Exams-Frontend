@@ -30,16 +30,14 @@ const CourseRegistrationModal: React.FC<CourseRegistrationModalProps> = ({
     setLoading(true);
     
     try {
-      const token = localStorage.getItem('accessToken');
       
       // Fixed URL to match the backend route
       const response = await fetch(`${API_BASE_URL}/api/courses/register`, {
+        credentials: 'include',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
-        credentials: 'include',
         body: JSON.stringify({
           courseCode: courseCode.trim().toUpperCase()
         })
