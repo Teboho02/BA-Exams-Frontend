@@ -65,6 +65,8 @@ const LandingPage: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(data.user));
 
 
+        console.log("User data saved to localStorage:", data.user); 
+
         // Navigate based on user role
         switch (data.user.role) {
           case 'admin':
