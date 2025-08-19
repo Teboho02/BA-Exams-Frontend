@@ -60,10 +60,7 @@ const LandingPage: React.FC = () => {
 
       const data: LoginResponse = await response.json();
 
-      if (data.success && data.user && data.accessToken) {
-        // Store auth data in localStorage
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken || '');
+      if (data.success && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
 
         // Navigate based on user role
