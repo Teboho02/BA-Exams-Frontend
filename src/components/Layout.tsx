@@ -41,7 +41,7 @@ const Layout: React.FC<LayoutProps> = ({ children, role }) => {
     sessionStorage.clear();
   };
 
-  // Fetch registration requests for teachers
+// Fetch registration requests for teachers
 const fetchRegistrationRequests = async () => {
   if (role !== 'teacher') return;
   
@@ -58,11 +58,20 @@ const fetchRegistrationRequests = async () => {
       
       // Handle the API response structure correctly
       // API returns: { success: true, count: 1, requests: [...] }
-      const requests = Array.isArray(data.requests) ? data.requests : [];
-      setRegistrationRequests(requests);
+      const allRequests = Array.isArray(data.requests) ? data.requests : [];
       
-      // Count unread requests
-      const unread = requests.filter((req: RegistrationRequest) => 
+      // IMPORTANT: Filter to only show pending requests
+      const pendingRequests = allRequests.filter((req: RegistrationRequest) => {
+        console.log(`Request ${req.id} status: ${req.status}`); // Debug log
+        return req.status === 'pending';
+      });
+      
+      console.log('All requests:', allRequests.length, 'Pending only:', pendingRequests.length); // Debug log
+      
+      setRegistrationRequests(pendingRequests);
+      
+      // Count unread pending requests
+      const unread = pendingRequests.filter((req: RegistrationRequest) => 
         !localStorage.getItem(`request_read_${req.id}`)
       );
       setUnreadCount(unread.length);
@@ -79,8 +88,6 @@ const fetchRegistrationRequests = async () => {
     setUnreadCount(0);
   }
 };
-  // Handle approval/rejection of registration requests
-
 // Fixed handleRegistrationAction function to match the backend API
 const handleRegistrationAction = async (requestId: string, action: 'approve' | 'reject') => {
   try {
@@ -285,47 +292,53 @@ const handleRegistrationAction = async (requestId: string, action: 'approve' | '
                 )}
               </button>
               
+              {/* Modal for Registration Requests */}
               {showNotifications && (
-                <div className="notifications-dropdown">
-                  <div className="notifications-header">
-                    <h4>Registration Requests</h4>
-                  </div>
-                  <div className="notifications-content">
-                    {!Array.isArray(registrationRequests) || registrationRequests.length === 0 ? (
-                      <div className="no-notifications">
-                        No pending registration requests
-                      </div>
-                    ) : (
-                      registrationRequests.map((request) => (
-                        <div key={request.id} className="notification-item">
-                          <div className="notification-info">
-                            <strong>{request.studentName}</strong>
-                            <div className="notification-details">
-                              <span>{request.studentEmail}</span>
-                              <br />
-                              <br />
-                              <small>{new Date(request.requestedAt).toLocaleString()}</small>
+                <>
+                  <div className="modal-overlay" onClick={toggleNotifications}></div>
+                  <div className="notifications-modal">
+                    <div className="modal-header">
+                      <h4>Registration Requests</h4>
+                      <button className="close-modal" onClick={toggleNotifications}>×</button>
+                    </div>
+                    <div className="modal-content">
+                      {!Array.isArray(registrationRequests) || registrationRequests.length === 0 ? (
+                        <div className="no-notifications">
+                          No pending registration requests
+                        </div>
+                      ) : (
+                        registrationRequests.map((request) => (
+                          <div key={request.id} className="notification-item">
+                            <div className="notification-info">
+                              <strong>{request.studentName}</strong>
+                              <div className="notification-details">
+                                <span>{request.studentEmail}</span>
+                                <br />
+                                <strong>Course: {request.courseTitle}</strong>
+                                <br />
+                                <small>{new Date(request.requestedAt).toLocaleString()}</small>
+                              </div>
+                            </div>
+                            <div className="notification-actions">
+                              <button 
+                                className="approve-btn"
+                                onClick={() => handleRegistrationAction(request.id, 'approve')}
+                              >
+                                ✓ Approve
+                              </button>
+                              <button 
+                                className="reject-btn"
+                                onClick={() => handleRegistrationAction(request.id, 'reject')}
+                              >
+                                ✗ Reject
+                              </button>
                             </div>
                           </div>
-                          <div className="notification-actions">
-                            <button 
-                              className="approve-btn"
-                              onClick={() => handleRegistrationAction(request.id, 'approve')}
-                            >
-                              ✓ Approve
-                            </button>
-                            <button 
-                              className="reject-btn"
-                              onClick={() => handleRegistrationAction(request.id, 'reject')}
-                            >
-                              ✗ Reject
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}

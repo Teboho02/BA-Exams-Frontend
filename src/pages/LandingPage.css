@@ -495,9 +495,9 @@ body {
     border-radius: 16px;
     max-width: 400px;
     width: 100%;
-    padding: 32px;
+    padding: 22px;
     position: relative;
-    max-height: 90vh;
+    max-height: 80vh;
     overflow-y: auto;
 }
 
@@ -559,20 +559,14 @@ body {
     color: #6b7280;
 }
 
-.modal-form {
-    margin-bottom: 24px;
-}
 
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: 1px;
+    margin-bottom: 10px;
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
 
 .form-label {
     display: block;
@@ -598,7 +592,7 @@ body {
 
 .form-input {
     width: 100%;
-    padding: 12px 16px;
+    padding: 6px 8x;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     font-size: 16px;
@@ -766,8 +760,8 @@ body {
     }
     
     .modal-content {
-        margin: 20px;
-        padding: 24px;
+        margin: 10px;
+        padding: 12x;
     }
     
     .form-row {

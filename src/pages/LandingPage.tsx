@@ -82,7 +82,7 @@ const LandingPage: React.FC = () => {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginLoading(true);
+    setLoginLoading(false);
     setLoginError('');
 
     try {
@@ -189,6 +189,7 @@ const LandingPage: React.FC = () => {
 
   const switchToRegister = () => {
     setShowLogin(false);
+
     setShowRegister(true);
     setLoginError('');
   };
@@ -228,7 +229,7 @@ const LandingPage: React.FC = () => {
                 onClick={() => setShowRegister(true)}
                 className="btn-secondary"
               >
-                Create Account
+                Register
               </button>
               <button
                 onClick={() => setShowLogin(true)}
@@ -511,7 +512,7 @@ const LandingPage: React.FC = () => {
                   onClick={switchToRegister}
                   className="modal-link"
                 >
-                  Create Account
+                  Register
                 </button>
               </p>
             </div>
@@ -530,16 +531,7 @@ const LandingPage: React.FC = () => {
               </svg>
             </button>
             
-            <div className="modal-header">
-              <div className="modal-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-                </svg>
-              </div>
-              <h2 className="modal-title">Create Account</h2>
-              <p className="modal-subtitle">Join Bethunana Academy online platform</p>
-            </div>
+       
 
             <form onSubmit={handleRegisterSubmit} className="modal-form">
               <div className="form-row">

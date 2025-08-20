@@ -69,145 +69,145 @@ const AssignmentCreator: React.FC = () => {
 
 
   const convertBackendQuestionToFrontend = (backendQuestion: any): Question => {
-  const answers: Answer[] = [];
-  let acceptableAnswers: string[] = [];
-  let matchType: "exact" | "contains" | "regex" | undefined = 'exact';
-  let caseSensitive: boolean = false;
-  
-  if (backendQuestion.questionType === 'multiple_choice' || backendQuestion.questionType === 'true_false') {
-    if (backendQuestion.answers && Array.isArray(backendQuestion.answers)) {
-      backendQuestion.answers.forEach((answer: any, index: number) => {
-        answers.push({
-          id: index + 1,
-          // Fix: Use answerText instead of text, and isCorrect instead of correct
-          text: answer.answerText || answer.text || '',
-          correct: answer.isCorrect !== undefined ? answer.isCorrect : (answer.correct || false),
-          feedback: answer.feedback || ''
-        });
-      });
-    }
-    
-    if (answers.length < 2) {
-      answers.push(
-        { id: 1, text: '', correct: true, feedback: '' },
-        { id: 2, text: '', correct: false, feedback: '' }
-      );
-    }
-  } else if (backendQuestion.questionType === 'short_answer') {
-    // Handle short answer questions
-    acceptableAnswers = backendQuestion.acceptableAnswers || [''];
-    
-    // Ensure matchType is one of the allowed values
-    const backendMatchType = backendQuestion.matchType;
-    if (backendMatchType === 'exact' || backendMatchType === 'contains' || backendMatchType === 'regex') {
-      matchType = backendMatchType;
-    } else {
-      matchType = 'exact'; // default
-    }
-    
-    caseSensitive = backendQuestion.caseSensitive || false;
-    
-    // Ensure at least one acceptable answer exists
-    if (acceptableAnswers.length === 0) {
-      acceptableAnswers = [''];
-    }
-  } else if (backendQuestion.questionType === 'essay') {
-    // Essay questions don't need answers or acceptable answers
-    acceptableAnswers = [];
-  }
+    const answers: Answer[] = [];
+    let acceptableAnswers: string[] = [];
+    let matchType: "exact" | "contains" | "regex" | undefined = 'exact';
+    let caseSensitive: boolean = false;
 
-  return {
-    id: parseInt(backendQuestion.id) || Date.now(),
-    title: backendQuestion.title || `Question ${questions.length + 1}`,
-    type: backendQuestion.questionType || 'multiple_choice',
-    points: backendQuestion.points || 1,
-    text: backendQuestion.questionText || '',
-    answers: answers,
-    acceptableAnswers: acceptableAnswers,
-    matchType: matchType,
-    caseSensitive: caseSensitive,
-    imageUrl: backendQuestion.imageUrl || undefined
+    if (backendQuestion.questionType === 'multiple_choice' || backendQuestion.questionType === 'true_false') {
+      if (backendQuestion.answers && Array.isArray(backendQuestion.answers)) {
+        backendQuestion.answers.forEach((answer: any, index: number) => {
+          answers.push({
+            id: index + 1,
+            // Fix: Use answerText instead of text, and isCorrect instead of correct
+            text: answer.answerText || answer.text || '',
+            correct: answer.isCorrect !== undefined ? answer.isCorrect : (answer.correct || false),
+            feedback: answer.feedback || ''
+          });
+        });
+      }
+
+      if (answers.length < 2) {
+        answers.push(
+          { id: 1, text: '', correct: true, feedback: '' },
+          { id: 2, text: '', correct: false, feedback: '' }
+        );
+      }
+    } else if (backendQuestion.questionType === 'short_answer') {
+      // Handle short answer questions
+      acceptableAnswers = backendQuestion.acceptableAnswers || [''];
+
+      // Ensure matchType is one of the allowed values
+      const backendMatchType = backendQuestion.matchType;
+      if (backendMatchType === 'exact' || backendMatchType === 'contains' || backendMatchType === 'regex') {
+        matchType = backendMatchType;
+      } else {
+        matchType = 'exact'; // default
+      }
+
+      caseSensitive = backendQuestion.caseSensitive || false;
+
+      // Ensure at least one acceptable answer exists
+      if (acceptableAnswers.length === 0) {
+        acceptableAnswers = [''];
+      }
+    } else if (backendQuestion.questionType === 'essay') {
+      // Essay questions don't need answers or acceptable answers
+      acceptableAnswers = [];
+    }
+
+    return {
+      id: parseInt(backendQuestion.id) || Date.now(),
+      title: backendQuestion.title || `Question ${questions.length + 1}`,
+      type: backendQuestion.questionType || 'multiple_choice',
+      points: backendQuestion.points || 1,
+      text: backendQuestion.questionText || '',
+      answers: answers,
+      acceptableAnswers: acceptableAnswers,
+      matchType: matchType,
+      caseSensitive: caseSensitive,
+      imageUrl: backendQuestion.imageUrl || undefined
+    };
   };
-};
 
   // Load existing assignment data when editing
   useEffect(() => {
 
-    
+
 
     const loadAssignmentData = async () => {
-  if (!isEditing || !assignmentId) return;
+      if (!isEditing || !assignmentId) return;
 
-  try {
-    setIsLoading(true);
-    setLoadError('');
+      try {
+        setIsLoading(true);
+        setLoadError('');
 
-    const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
-      credentials: 'include',
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        const response = await fetch(`${API_BASE_URL}/api/assignments/${assignmentId}`, {
+          credentials: 'include',
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Unauthorized. Please login again.');
+          }
+          throw new Error('Failed to load assignment data');
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.assignment) {
+          const assignmentData = data.assignment;
+
+          setAssignment({
+            title: assignmentData.title || 'Unnamed Quiz',
+            description: assignmentData.description || '',
+            assignmentType: assignmentData.assignmentType || 'quiz',
+            assignmentGroup: assignmentData.assignmentGroup || 'quizzes',
+            points: assignmentData.maxPoints || 10,
+            gradingType: assignmentData.gradingType || 'points',
+            submissionTypes: assignmentData.submissionTypes || ['online_quiz'],
+            dueDate: formatDateForInput(assignmentData.dueDate),
+            availableFrom: formatDateForInput(assignmentData.availableFrom),
+            availableUntil: formatDateForInput(assignmentData.availableUntil),
+            published: assignmentData.isPublished || false,
+            allowedAttempts: assignmentData.allowedAttempts || 1,
+            timeLimit: assignmentData.timeLimitMinutes ? assignmentData.timeLimitMinutes.toString() : '',
+            hasTimeLimit: assignmentData.hasTimeLimit || false,
+            shuffleAnswers: assignmentData.shuffleAnswers || false,
+            showCorrectAnswers: assignmentData.showCorrectAnswers !== false,
+            multipleAttempts: (assignmentData.allowedAttempts || 1) > 1,
+            oneQuestionAtTime: assignmentData.oneQuestionAtTime || false,
+            cantGoBack: assignmentData.cantGoBack || false,
+            requireAccessCode: !!assignmentData.accessCode,
+            accessCode: assignmentData.accessCode || '',
+            ipFiltering: assignmentData.ipFiltering || false,
+            ipFilter: assignmentData.ipFilter || '',
+            notifyOfUpdate: false,
+            password: assignmentData.accessCode || '',
+            quizInstructions: assignmentData.instructions || assignmentData.quizInstructions || ''
+          });
+
+          if (data.questions && Array.isArray(data.questions)) {
+            const convertedQuestions = data.questions.map(convertBackendQuestionToFrontend);
+            setQuestions(convertedQuestions);
+          }
+
+        } else {
+          throw new Error('Invalid assignment data received');
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load assignment';
+        setLoadError(errorMessage);
+        console.error('Error loading assignment:', err);
+      } finally {
+        setIsLoading(false);
       }
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Unauthorized. Please login again.');
-      }
-      throw new Error('Failed to load assignment data');
-    }
-
-    const data = await response.json();
-    
-    if (data.success && data.assignment) {
-      const assignmentData = data.assignment;
-      
-      setAssignment({
-        title: assignmentData.title || 'Unnamed Quiz',
-        description: assignmentData.description || '',
-        assignmentType: assignmentData.assignmentType || 'quiz',
-        assignmentGroup: assignmentData.assignmentGroup || 'quizzes',
-        points: assignmentData.maxPoints || 10,
-        gradingType: assignmentData.gradingType || 'points',
-        submissionTypes: assignmentData.submissionTypes || ['online_quiz'],
-        dueDate: formatDateForInput(assignmentData.dueDate),
-        availableFrom: formatDateForInput(assignmentData.availableFrom),
-        availableUntil: formatDateForInput(assignmentData.availableUntil),
-        published: assignmentData.isPublished || false,
-        allowedAttempts: assignmentData.allowedAttempts || 1,
-        timeLimit: assignmentData.timeLimitMinutes ? assignmentData.timeLimitMinutes.toString() : '',
-        hasTimeLimit: assignmentData.hasTimeLimit || false,
-        shuffleAnswers: assignmentData.shuffleAnswers || false,
-        showCorrectAnswers: assignmentData.showCorrectAnswers !== false,
-        multipleAttempts: (assignmentData.allowedAttempts || 1) > 1,
-        oneQuestionAtTime: assignmentData.oneQuestionAtTime || false,
-        cantGoBack: assignmentData.cantGoBack || false,
-        requireAccessCode: !!assignmentData.accessCode,
-        accessCode: assignmentData.accessCode || '',
-        ipFiltering: assignmentData.ipFiltering || false,
-        ipFilter: assignmentData.ipFilter || '',
-        notifyOfUpdate: false,
-        password: assignmentData.accessCode || '',
-        quizInstructions: assignmentData.instructions || assignmentData.quizInstructions || ''
-      });
-
-      if (data.questions && Array.isArray(data.questions)) {
-        const convertedQuestions = data.questions.map(convertBackendQuestionToFrontend);
-        setQuestions(convertedQuestions);
-      }
-
-    } else {
-      throw new Error('Invalid assignment data received');
-    }
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Failed to load assignment';
-    setLoadError(errorMessage);
-    console.error('Error loading assignment:', err);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    };
 
 
     loadAssignmentData();
@@ -247,7 +247,7 @@ const AssignmentCreator: React.FC = () => {
   }, [questions.length]);
 
   const updateQuestion = useCallback((questionId: number, updates: Partial<Question>): void => {
-    setQuestions(prev => prev.map(q => 
+    setQuestions(prev => prev.map(q =>
       q.id === questionId ? { ...q, ...updates } : q
     ));
   }, []);
@@ -277,7 +277,7 @@ const AssignmentCreator: React.FC = () => {
   const updateAnswer = useCallback((questionId: number, answerId: number, field: keyof Answer, value: string | boolean): void => {
     setQuestions(prev => prev.map(q => {
       if (q.id === questionId) {
-        const updatedAnswers = q.answers.map(answer => 
+        const updatedAnswers = q.answers.map(answer =>
           answer.id === answerId ? { ...answer, [field]: value } : answer
         );
         return { ...q, answers: updatedAnswers };
@@ -438,7 +438,7 @@ const AssignmentCreator: React.FC = () => {
       console.log('Sending payload to API:', JSON.stringify(payload, null, 2));
 
       // Determine API endpoint and method
-      const url = isEditing 
+      const url = isEditing
         ? `${API_BASE_URL}/api/assignments/${assignmentId}`
         : `${API_BASE_URL}/api/assignments`;
       const method = isEditing ? 'PUT' : 'POST';
@@ -479,7 +479,7 @@ const AssignmentCreator: React.FC = () => {
         });
 
         let errorMessage = `Failed to ${isEditing ? 'update' : 'save'} quiz`;
-        
+
         if (responseData?.message) {
           errorMessage = responseData.message;
         } else if (responseData?.error) {
@@ -497,19 +497,19 @@ const AssignmentCreator: React.FC = () => {
       }
 
       console.log(`Quiz ${isEditing ? 'updated' : 'saved'} successfully:`, responseData);
-      
+
       // Update the local state with the new published status
-      setAssignment(prev => ({ 
-        ...prev, 
-        published: publish || prev.published 
+      setAssignment(prev => ({
+        ...prev,
+        published: publish || prev.published
       }));
 
       // Show success message
       alert(`Quiz ${publish ? 'published' : (isEditing ? 'updated' : 'saved')} successfully!`);
-      
+
       // Navigate back to the course page
       navigate(`/teacher/courses/${courseId}`);
-      
+
     } catch (error) {
       console.error(`Error ${isEditing ? 'updating' : 'saving'} quiz:`, error);
       setSaveError(error instanceof Error ? error.message : `Failed to ${isEditing ? 'update' : 'save'} quiz`);
@@ -542,8 +542,8 @@ const AssignmentCreator: React.FC = () => {
         <div className="assignment-creator">
           <div className="error" style={{ textAlign: 'center', padding: '2rem' }}>
             <p>Error loading assignment: {loadError}</p>
-            <button 
-              onClick={() => navigate(`/teacher/courses/${courseId}`)} 
+            <button
+              onClick={() => navigate(`/teacher/courses/${courseId}`)}
               className="btn btn-secondary"
               style={{ marginTop: '1rem' }}
             >
@@ -562,6 +562,7 @@ const AssignmentCreator: React.FC = () => {
         {/* Header */}
         <AssignmentHeader
           assignment={assignment}
+          questions={questions}  // Add this line
           totalPoints={totalPoints}
           isEditing={isEditing}
           isSaving={isSaving}
