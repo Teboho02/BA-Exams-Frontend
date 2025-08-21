@@ -1,7 +1,6 @@
-// QuizPreviewModal.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Timer, Flag, ArrowLeft, ArrowRight, AlertCircle, FileText } from 'lucide-react';
-import type { Assignment, Question, Answer } from '../types/Assignment';
+import type { Assignment, Question } from '../types/Assignment';
 import LatexRenderer from '../../../student/QuizAttemptPage/LatexRenderer';
 import '../TeacherAssignments.css';
 

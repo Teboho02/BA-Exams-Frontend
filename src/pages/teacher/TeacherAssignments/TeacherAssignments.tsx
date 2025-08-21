@@ -69,66 +69,89 @@ const AssignmentCreator: React.FC = () => {
 
 
   const convertBackendQuestionToFrontend = (backendQuestion: any): Question => {
-    const answers: Answer[] = [];
-    let acceptableAnswers: string[] = [];
-    let matchType: "exact" | "contains" | "regex" | undefined = 'exact';
-    let caseSensitive: boolean = false;
+  const answers: Answer[] = [];
+  let acceptableAnswers: string[] = [];
+  let matchType: "exact" | "contains" | "regex" | undefined = 'exact';
+  let caseSensitive: boolean = false;
 
-    if (backendQuestion.questionType === 'multiple_choice' || backendQuestion.questionType === 'true_false') {
-      if (backendQuestion.answers && Array.isArray(backendQuestion.answers)) {
-        backendQuestion.answers.forEach((answer: any, index: number) => {
-          answers.push({
-            id: index + 1,
-            // Fix: Use answerText instead of text, and isCorrect instead of correct
-            text: answer.answerText || answer.text || '',
-            correct: answer.isCorrect !== undefined ? answer.isCorrect : (answer.correct || false),
-            feedback: answer.feedback || ''
-          });
+  if (backendQuestion.questionType === 'multiple_choice' || backendQuestion.questionType === 'true_false') {
+    // Handle multiple choice and true/false questions
+    if (backendQuestion.answers && Array.isArray(backendQuestion.answers)) {
+      backendQuestion.answers.forEach((answer: any, index: number) => {
+        answers.push({
+          id: index + 1,
+          text: answer.answerText || answer.text || '',
+          correct: answer.isCorrect !== undefined ? answer.isCorrect : (answer.correct || false),
+          feedback: answer.feedback || ''
         });
-      }
-
-      if (answers.length < 2) {
-        answers.push(
-          { id: 1, text: '', correct: true, feedback: '' },
-          { id: 2, text: '', correct: false, feedback: '' }
-        );
-      }
-    } else if (backendQuestion.questionType === 'short_answer') {
-      // Handle short answer questions
-      acceptableAnswers = backendQuestion.acceptableAnswers || [''];
-
-      // Ensure matchType is one of the allowed values
-      const backendMatchType = backendQuestion.matchType;
-      if (backendMatchType === 'exact' || backendMatchType === 'contains' || backendMatchType === 'regex') {
-        matchType = backendMatchType;
-      } else {
-        matchType = 'exact'; // default
-      }
-
-      caseSensitive = backendQuestion.caseSensitive || false;
-
-      // Ensure at least one acceptable answer exists
-      if (acceptableAnswers.length === 0) {
-        acceptableAnswers = [''];
-      }
-    } else if (backendQuestion.questionType === 'essay') {
-      // Essay questions don't need answers or acceptable answers
-      acceptableAnswers = [];
+      });
     }
 
-    return {
-      id: parseInt(backendQuestion.id) || Date.now(),
-      title: backendQuestion.title || `Question ${questions.length + 1}`,
-      type: backendQuestion.questionType || 'multiple_choice',
-      points: backendQuestion.points || 1,
-      text: backendQuestion.questionText || '',
-      answers: answers,
-      acceptableAnswers: acceptableAnswers,
-      matchType: matchType,
-      caseSensitive: caseSensitive,
-      imageUrl: backendQuestion.imageUrl || undefined
-    };
+    if (answers.length < 2) {
+      answers.push(
+        { id: 1, text: '', correct: true, feedback: '' },
+        { id: 2, text: '', correct: false, feedback: '' }
+      );
+    }
+  } else if (backendQuestion.questionType === 'short_answer') {
+    // Handle short answer questions - now the API returns them in the answers array
+    if (backendQuestion.answers && Array.isArray(backendQuestion.answers)) {
+      // Extract acceptable answers from the answers array
+      acceptableAnswers = backendQuestion.answers.map((answer: any) => 
+        answer.answerText || answer.text || ''
+      );
+      
+      // Get matching options from the first answer (they should all be the same)
+      if (backendQuestion.answers.length > 0) {
+        const firstAnswer = backendQuestion.answers[0];
+        
+        // Handle caseSensitive
+        caseSensitive = firstAnswer.isCaseSensitive !== undefined 
+          ? firstAnswer.isCaseSensitive 
+          : (firstAnswer.caseSensitive || false);
+        
+        // Handle matchType
+        if (firstAnswer.isExactMatch !== undefined) {
+          // Convert from isExactMatch boolean to matchType string
+          matchType = firstAnswer.isExactMatch ? 'exact' : 'contains';
+        } else if (backendQuestion.matchType) {
+          // Use matchType if provided directly
+          const backendMatchType = backendQuestion.matchType;
+          if (backendMatchType === 'exact' || backendMatchType === 'contains' || backendMatchType === 'regex') {
+            matchType = backendMatchType;
+          }
+        }
+      }
+    } else if (backendQuestion.acceptableAnswers) {
+      // Fallback to acceptableAnswers field if it exists (for backward compatibility)
+      acceptableAnswers = backendQuestion.acceptableAnswers;
+      matchType = backendQuestion.matchType || 'exact';
+      caseSensitive = backendQuestion.caseSensitive || false;
+    }
+
+    // Ensure at least one acceptable answer exists
+    if (acceptableAnswers.length === 0) {
+      acceptableAnswers = [''];
+    }
+  } else if (backendQuestion.questionType === 'essay') {
+    // Essay questions don't need answers or acceptable answers
+    acceptableAnswers = [];
+  }
+
+  return {
+    id: parseInt(backendQuestion.id) || Date.now(),
+    title: backendQuestion.title || `Question ${questions.length + 1}`,
+    type: backendQuestion.questionType || 'multiple_choice',
+    points: backendQuestion.points || 1,
+    text: backendQuestion.questionText || '',
+    answers: answers,
+    acceptableAnswers: acceptableAnswers,
+    matchType: matchType,
+    caseSensitive: caseSensitive,
+    imageUrl: backendQuestion.imageUrl || undefined
   };
+};
+
 
   // Load existing assignment data when editing
   useEffect(() => {
