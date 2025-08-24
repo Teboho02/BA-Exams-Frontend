@@ -6,6 +6,7 @@ import { formatDateTime } from '../utils/helpers';
 import QuestionReview from './QuestionReview';
 //const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import { API_BASE_URL } from '../../../../config/api';  
+
 interface StudentDetailModalProps {
     selectedStudentData: StudentReview;
     questions: Question[];
@@ -25,18 +26,20 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         [questionId: string]: {
             points: number;
             isEditing: boolean;
+            manuallyGraded: boolean;
         }
     }>({});
 
-    // Initialize grading state for essay questions
+    // Initialize grading state for ALL questions (not just essays)
     React.useEffect(() => {
         const initialState: typeof gradingState = {};
         questions.forEach(question => {
-            if (question.questionType === 'essay' && selectedStudentData.answers?.[question.id]) {
+            if (selectedStudentData.answers?.[question.id]) {
                 const answer = selectedStudentData.answers[question.id];
                 initialState[question.id] = {
                     points: answer.pointsEarned || 0,
-                    isEditing: false
+                    isEditing: false,
+                    manuallyGraded: (answer.manuallyGraded ?? false) || question.questionType === 'essay'
                 };
             }
         });
@@ -59,7 +62,8 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
             ...prev,
             [questionId]: {
                 points: answer?.pointsEarned || 0,
-                isEditing: false
+                isEditing: false,
+                manuallyGraded: prev[questionId]?.manuallyGraded || false
             }
         }));
     };
@@ -68,8 +72,15 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         const grading = gradingState[questionId];
         if (!grading) return;
 
+        // Show loading state
+        const originalButtonText = document.querySelector(`button[data-question-id="${questionId}"]`)?.textContent;
+        const saveButton = document.querySelector(`button[data-question-id="${questionId}"]`) as HTMLButtonElement;
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+        }
+
         try {
-            // Call the new API endpoint to save the grade
             const response = await fetch(API_BASE_URL + `/api/quiz/submissions/${selectedStudentData.submission?.id}/questions/${questionId}/grade`, {
                 credentials: 'include',
                 method: 'PUT',
@@ -81,23 +92,23 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 })
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to save grade');
-            }
-
             const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || 'Failed to save grade');
+            }
 
             // Update local grading state to reflect the saved grade
             setGradingState(prev => ({
                 ...prev,
                 [questionId]: {
                     ...prev[questionId],
-                    isEditing: false
+                    isEditing: false,
+                    manuallyGraded: true
                 }
             }));
 
-            // Calculate the new total score from the API response or local calculation
+            // Use the total score from the API response if available, otherwise calculate locally
             const newTotalScore = result.data?.totalScore || calculateTotalScore();
 
             // Call the parent callback to update the main component state
@@ -110,21 +121,114 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                 );
             }
 
-            console.log('Grade saved successfully:', result.data);
+            console.log('Grade saved successfully:', {
+                questionId,
+                points: grading.points,
+                totalScore: newTotalScore,
+                isFullyGraded: result.data?.isFullyGraded
+            });
+
+            // Show success feedback
+            if (saveButton) {
+                saveButton.textContent = 'Saved!';
+                saveButton.style.backgroundColor = '#059669';
+                setTimeout(() => {
+                    saveButton.textContent = originalButtonText || 'Save Grade';
+                    saveButton.style.backgroundColor = '';
+                }, 1500);
+            }
 
         } catch (error) {
             console.error('Failed to save grade:', error);
-            // Optionally show an error message to the user
-            alert(`Failed to save grade: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            
+            // Show error feedback
+            if (saveButton) {
+                saveButton.textContent = 'Error!';
+                saveButton.style.backgroundColor = '#dc2626';
+                setTimeout(() => {
+                    saveButton.textContent = originalButtonText || 'Save Grade';
+                    saveButton.style.backgroundColor = '';
+                }, 2000);
+            }
+
+            // Show user-friendly error message
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            alert(`Failed to save grade: ${errorMessage}`);
+            
+            // Reset the grading state on error
+            const answer = selectedStudentData.answers?.[questionId];
+            setGradingState(prev => ({
+                ...prev,
+                [questionId]: {
+                    points: answer?.pointsEarned || 0,
+                    isEditing: false,
+                    manuallyGraded: prev[questionId]?.manuallyGraded || false
+                }
+            }));
+        } finally {
+            // Re-enable the button
+            if (saveButton) {
+                saveButton.disabled = false;
+            }
+        }
+    };
+
+    const handleResetToAutoGrade = (questionId: string) => {
+        const question = questions.find(q => q.id === questionId);
+        if (!question || question.questionType === 'essay') return;
+
+        const answer = selectedStudentData.answers?.[questionId];
+        if (!answer) return;
+
+        // Reset to original auto-graded score
+        const originalPoints = calculateOriginalAutoGradePoints(question, answer);
+        
+        setGradingState(prev => ({
+            ...prev,
+            [questionId]: {
+                points: originalPoints,
+                isEditing: false,
+                manuallyGraded: false
+            }
+        }));
+
+        // Update the parent component
+        if (onGradeUpdate) {
+            const newTotalScore = calculateTotalScoreWithOverride(questionId, originalPoints);
+            onGradeUpdate(
+                selectedStudentData.student.id,
+                questionId,
+                originalPoints,
+                newTotalScore
+            );
+        }
+    };
+
+    const calculateOriginalAutoGradePoints = (question: Question, answer: any) => {
+        switch (question.questionType) {
+            case 'multiple_choice':
+            case 'true_false':
+                return answer.isCorrect ? question.points : 0;
+            case 'short_answer':
+                // For short answer, we might need to implement some basic matching logic
+                // For now, return the current points or 0
+                return answer.isCorrect ? question.points : 0;
+            case 'essay':
+                return 0; // Essays can't be auto-graded
+            default:
+                return 0;
         }
     };
 
     const handlePointsChange = (questionId: string, points: number) => {
+        const maxPoints = questions.find(q => q.id === questionId)?.points || 0;
+        const clampedPoints = Math.max(0, Math.min(points, maxPoints));
+        
         setGradingState(prev => ({
             ...prev,
             [questionId]: {
                 ...prev[questionId],
-                points: Math.max(0, Math.min(points, questions.find(q => q.id === questionId)?.points || 0))
+                points: clampedPoints
             }
         }));
     };
@@ -136,13 +240,24 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
             const answer = selectedStudentData.answers![question.id];
             if (!answer) return total;
 
-            if (question.questionType === 'essay') {
-                const grading = gradingState[question.id];
-                // Use the grading state points if available, otherwise use the answer's points
-                return total + (grading?.points ?? answer.pointsEarned) || 0;
+            const grading = gradingState[question.id];
+            return total + (grading?.points ?? answer.pointsEarned) || 0;
+        }, 0);
+    };
+
+    const calculateTotalScoreWithOverride = (overrideQuestionId: string, overridePoints: number) => {
+        if (!selectedStudentData.answers) return 0;
+
+        return questions.reduce((total, question) => {
+            if (question.id === overrideQuestionId) {
+                return total + overridePoints;
             }
 
-            return total + (answer.pointsEarned || 0);
+            const answer = selectedStudentData.answers![question.id];
+            if (!answer) return total;
+
+            const grading = gradingState[question.id];
+            return total + (grading?.points ?? answer.pointsEarned) || 0;
         }, 0);
     };
 
@@ -157,37 +272,35 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
             if (question.questionType === 'essay') {
                 const grading = gradingState[question.id];
-                // Check if it's graded (either has been saved or is currently being graded)
                 return answer.isGraded || (grading?.points !== undefined && grading.points >= 0);
             }
 
-            return true; // Non-essay questions are auto-graded
+            return true; // Non-essay questions are considered graded (either auto or manually)
         });
     };
 
-    const needsGrading = (questionId: string, questionType: string): boolean => {
-        const answer = selectedStudentData.answers?.[questionId];
-        if (!answer || questionType !== 'essay') return false;
-
-        return !answer.isGraded;
-    };
-
-    console.log(needsGrading);
-
-    // Get the current points for a question (either from grading state or answer data)
-    const getCurrentPoints = (questionId: string, questionType: string) => {
+    const getCurrentPoints = (questionId: string) => {
         const answer = selectedStudentData.answers?.[questionId];
         if (!answer) return 0;
 
-        if (questionType === 'essay') {
-            const grading = gradingState[questionId];
-            return (grading?.points ?? answer.pointsEarned) || 0;
-        }
-
-        return answer.pointsEarned || 0;
+        const grading = gradingState[questionId];
+        return (grading?.points ?? answer.pointsEarned) || 0;
     };
 
-    console.log(assignment);
+    const isManuallyGraded = (questionId: string) => {
+        const grading = gradingState[questionId];
+        return grading?.manuallyGraded || false;
+    };
+
+    const getQuestionTypeLabel = (questionType: string) => {
+        switch (questionType) {
+            case 'multiple_choice': return 'Multiple Choice';
+            case 'true_false': return 'True/False';
+            case 'short_answer': return 'Short Answer';
+            case 'essay': return 'Essay';
+            default: return questionType;
+        }
+    };
 
     return (
         <div className="modal-overlay" onClick={closeModal}
@@ -203,19 +316,11 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                         <div className="score-summary">
                             <div className="score-display">
                                 <span className="current-score">
-                                    {isFullyGraded() ? (
-                                        <>
-                                            <span className="score">{calculateTotalScore()}</span>
-                                            <span className="total">/{getTotalPossiblePoints()}</span>
-                                            <span className="percentage">
-                                                ({Math.round((calculateTotalScore() / getTotalPossiblePoints()) * 100)}%)
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <span className="ungraded-indicator">
-                                            Ungraded ({calculateTotalScore()}/{getTotalPossiblePoints()} partial)
-                                        </span>
-                                    )}
+                                    <span className="score">{calculateTotalScore()}</span>
+                                    <span className="total">/{getTotalPossiblePoints()}</span>
+                                    <span className="percentage">
+                                        ({Math.round((calculateTotalScore() / getTotalPossiblePoints()) * 100)}%)
+                                    </span>
                                 </span>
 
                                 {!isFullyGraded() && (
@@ -247,11 +352,12 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                 </div>
                             </div>
 
-                            {/* Render each question review with manual grading for essays */}
+                            {/* Render each question review with manual grading capabilities */}
                             {questions.map((question) => {
                                 const answer = selectedStudentData.answers?.[question.id];
                                 const grading = gradingState[question.id];
-                                const currentPoints = getCurrentPoints(question.id, question.questionType);
+                                const currentPoints = getCurrentPoints(question.id);
+                                const isManualGrade = isManuallyGraded(question.id);
 
                                 return (
                                     <div key={question.id} className="question-review-container">
@@ -260,25 +366,37 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                 <span className="question-number">
                                                     Question {question.questionNumber}
                                                 </span>
+                                                <span className="question-type">
+                                                    [{getQuestionTypeLabel(question.questionType)}]
+                                                </span>
                                                 <span className="question-points">
                                                     ({question.points} {question.points === 1 ? 'point' : 'points'})
                                                 </span>
                                             </div>
 
-                                            {question.questionType === 'essay' && answer && (
+                                            {answer && (
                                                 <div className="grading-status-indicator">
-                                                    {grading?.points !== undefined && grading.points >= 0 ? (
-                                                        <span className="graded">
-                                                            Graded: {currentPoints}/{question.points}
-                                                        </span>
-                                                    ) : answer.isGraded ? (
-                                                        <span className="graded">
-                                                            Graded: {currentPoints}/{question.points}
-                                                        </span>
+                                                    {question.questionType === 'essay' ? (
+                                                        // Essay grading status
+                                                        answer.isGraded || (grading?.points !== undefined && grading.points >= 0) ? (
+                                                            <span className="graded">
+                                                                Graded: {currentPoints}/{question.points}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="needs-grading">
+                                                                Needs Grading
+                                                            </span>
+                                                        )
                                                     ) : (
-                                                        <span className="needs-grading">
-                                                            Needs Grading
-                                                        </span>
+                                                        // Non-essay grading status
+                                                        <div className="auto-grade-status">
+                                                            <span className={`grade-status ${isManualGrade ? 'manually-graded' : 'auto-graded'}`}>
+                                                                {isManualGrade ? 'Manual' : 'Auto'}: {currentPoints}/{question.points}
+                                                            </span>
+                                                            {isManualGrade && (
+                                                                <span className="manual-indicator">✏️</span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -290,86 +408,96 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
                                         {answer ? (
                                             <div className="student-answer-section">
-                                                {question.questionType === 'essay' && (
-                                                    <div className="manual-grading-section">
-                                                        {grading?.isEditing ? (
-                                                            <div className="grading-form">
-                                                                <div className="points-input-group">
-                                                                    <label htmlFor={`points-${question.id}`}>
-                                                                        Points:
-                                                                    </label>
-                                                                    <input
-                                                                        id={`points-${question.id}`}
-                                                                        type="number"
-                                                                        min="0"
-                                                                        max={question.points}
-                                                                        step="0.5"
-                                                                        value={grading.points}
-                                                                        onChange={(e) => handlePointsChange(question.id, parseFloat(e.target.value) || 0)}
-                                                                        className="points-input"
-                                                                    />
-                                                                    <span className="max-points">/ {question.points}</span>
-                                                                </div>
+                                                {/* Manual Grading Section for ALL question types */}
+                                                <div className="manual-grading-section">
+                                                    {grading?.isEditing ? (
+                                                        <div className="grading-form">
+                                                            <div className="points-input-group">
+                                                                <label htmlFor={`points-${question.id}`}>
+                                                                    Points:
+                                                                </label>
+                                                                <input
+                                                                    id={`points-${question.id}`}
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max={question.points}
+                                                                    step="0.5"
+                                                                    value={grading.points}
+                                                                    onChange={(e) => handlePointsChange(question.id, parseFloat(e.target.value) || 0)}
+                                                                    className="points-input"
+                                                                />
+                                                                <span className="max-points">/ {question.points}</span>
+                                                            </div>
 
-                                                                <div className="grading-actions">
+                                                            <div className="grading-actions">
+                                                                <button
+                                                                    onClick={() => handleSaveGrade(question.id)}
+                                                                    className="save-grade-btn"
+                                                                    data-question-id={question.id}
+                                                                >
+                                                                    Save Grade
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleCancelGrading(question.id)}
+                                                                    className="cancel-grade-btn"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="grading-display">
+                                                            <div className="grade-summary">
+                                                                <div className="points-awarded">
+                                                                    <strong>Points: {currentPoints}/{question.points}</strong>
+                                                                    {isManualGrade && (
+                                                                        <span className="manual-grade-badge">Manual Grade</span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="grading-actions-display">
                                                                     <button
-                                                                        onClick={() => handleSaveGrade(question.id)}
-                                                                        className="save-grade-btn"
+                                                                        onClick={() => handleStartGrading(question.id)}
+                                                                        className="edit-grade-btn"
                                                                     >
-                                                                        Save Grade
+                                                                        {question.questionType === 'essay' ? 'Grade' : 'Override Grade'}
                                                                     </button>
-                                                                    <button
-                                                                        onClick={() => handleCancelGrading(question.id)}
-                                                                        className="cancel-grade-btn"
-                                                                    >
-                                                                        Cancel
-                                                                    </button>
+                                                                    {question.questionType !== 'essay' && isManualGrade && (
+                                                                        <button
+                                                                            onClick={() => handleResetToAutoGrade(question.id)}
+                                                                            className="reset-auto-grade-btn"
+                                                                            title="Reset to automatic grading"
+                                                                        >
+                                                                            Reset to Auto
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </div>
-                                                        ) : (
-                                                            <div className="grading-display">
-                                                                {(grading?.points !== undefined && grading.points >= 0) || answer.isGraded ? (
-                                                                    <div className="grade-summary">
-                                                                        <div className="points-awarded">
-                                                                            <strong>Points: {currentPoints}/{question.points}</strong>
-                                                                        </div>
-                                                                        <button
-                                                                            onClick={() => handleStartGrading(question.id)}
-                                                                            className="edit-grade-btn"
-                                                                        >
-                                                                            Edit Grade
-                                                                        </button>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="ungraded-prompt">
-                                                                        <span className="ungraded-text">
-                                                                            This answer requires manual grading
-                                                                        </span>
-                                                                        <button
-                                                                            onClick={() => handleStartGrading(question.id)}
-                                                                            className="grade-now-btn"
-                                                                        >
-                                                                            Grade Now
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        </div>
+                                                    )}
+                                                </div>
 
                                                 <h5>Student Answer:</h5>
                                                 <div
                                                     className="student-answer"
                                                     style={{ color: 'black', fontSize: '16px' }}
-                                                >                                                    {renderTextWithLatex(answer.studentAnswerText || 'No answer provided')}
+                                                >
+                                                    {renderTextWithLatex(answer.studentAnswerText || 'No answer provided')}
                                                 </div>
 
+                                                {/* Show original question review for non-essay questions */}
                                                 {question.questionType !== 'essay' && (
-                                                    <QuestionReview
-                                                        question={question}
-                                                        studentAnswer={answer}
-                                                    />
+                                                    <div className="original-grading-info">
+                                                        <h5>Question Details:</h5>
+                                                        <QuestionReview
+                                                            question={question}
+                                                            studentAnswer={answer}
+                                                        />
+                                                        {isManualGrade && (
+                                                            <div className="override-notice">
+                                                                <em>Note: This question has been manually graded and may override the automatic result shown above.</em>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         ) : (

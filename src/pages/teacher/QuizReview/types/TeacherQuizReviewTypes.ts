@@ -60,6 +60,10 @@ export interface StudentAnswer {
     pointsEarned: number;
     feedback: string | null;
     isGraded: boolean;
+    // New properties for manual grading support
+    manuallyGraded?: boolean;
+    gradedBy?: string | null;
+    gradingNotes?: string | null;
 }
 
 export interface StudentReview {
@@ -128,6 +132,30 @@ export interface QuizReviewData {
     studentReviews: StudentReview[];
     statistics: Statistics;
     lastUpdated: string;
-     maxPoints: number;  // Add this line
+    maxPoints: number;
+}
 
+// Additional types for manual grading functionality
+export interface GradeUpdateRequest {
+    questionId: string;
+    studentId: string;
+    submissionId: string;
+    points: number;
+    manuallyGraded: boolean;
+    gradingNotes?: string;
+}
+
+export interface GradeUpdateResponse {
+    success: boolean;
+    data: {
+        questionId: string;
+        pointsEarned: number;
+        totalScore: number;
+        percentage: number;
+        letterGrade: string;
+        isGraded: boolean;
+        manuallyGraded: boolean;
+        gradedAt: string;
+    };
+    message?: string;
 }
