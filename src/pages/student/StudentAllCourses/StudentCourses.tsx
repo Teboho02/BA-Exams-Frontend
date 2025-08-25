@@ -230,6 +230,11 @@ const StudentCourses: React.FC = () => {
   }
 
   if (error) {
+
+    //clear the local storage and redirect to home page
+    localStorage.removeItem('user');
+    navigate('/');
+
     return (
       <Layout role="student">
         <div className="error-container">

@@ -30,6 +30,9 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
         }
     }>({});
 
+
+    console.log(assignment);
+
     // Initialize grading state for ALL questions (not just essays)
     React.useEffect(() => {
         const initialState: typeof gradingState = {};
