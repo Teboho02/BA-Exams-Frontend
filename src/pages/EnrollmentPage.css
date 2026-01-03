@@ -1,0 +1,265 @@
+/* EnrollmentPage.css */
+
+.enrollment-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.enrollment-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.enrollment-header {
+  background: #f8f9fa;
+  padding: 30px;
+  text-align: center;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.enrollment-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 28px;
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+.course-name {
+  margin: 0;
+  font-size: 18px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.enrollment-status {
+  padding: 40px 30px;
+  text-align: center;
+}
+
+.status-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.enrollment-status h2 {
+  margin: 0 0 15px 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.enrollment-status p {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #6c757d;
+}
+
+.course-instructor {
+  font-style: italic;
+  color: #495057 !important;
+  margin-top: 10px !important;
+}
+
+/* Status-specific styles */
+.enrollment-status.success h2 {
+  color: #28a745;
+}
+
+.enrollment-status.success .status-icon {
+  color: #28a745;
+}
+
+.enrollment-status.already-enrolled h2 {
+  color: #17a2b8;
+}
+
+.enrollment-status.already-enrolled .status-icon {
+  color: #17a2b8;
+  font-size: 48px;
+  background: #d1ecf1;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 0 auto 20px auto;
+}
+
+.enrollment-status.expired h2 {
+  color: #ffc107;
+}
+
+.enrollment-status.expired .status-icon {
+  color: #ffc107;
+}
+
+.enrollment-status.error h2 {
+  color: #dc3545;
+}
+
+.enrollment-status.error .status-icon {
+  color: #dc3545;
+}
+
+.enrollment-status.loading h2 {
+  color: #6c757d;
+}
+
+/* Spinner animation */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Action buttons */
+.enrollment-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 24px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.btn.primary {
+  background: #667eea;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+}
+
+.btn.secondary {
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.btn.secondary:hover {
+  background: #e9ecef;
+  color: #495057;
+  transform: translateY(-1px);
+}
+
+/* Footer */
+.enrollment-footer {
+  background: #f8f9fa;
+  padding: 20px 30px;
+  border-top: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.help-text {
+  margin: 0;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.help-text a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.help-text a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .enrollment-page {
+    padding: 15px;
+  }
+
+  .enrollment-container {
+    border-radius: 8px;
+  }
+
+  .enrollment-header {
+    padding: 25px 20px;
+  }
+
+  .enrollment-header h1 {
+    font-size: 24px;
+  }
+
+  .course-name {
+    font-size: 16px;
+  }
+
+  .enrollment-status {
+    padding: 30px 20px;
+  }
+
+  .status-icon {
+    font-size: 48px;
+    height: 60px;
+  }
+
+  .enrollment-status h2 {
+    font-size: 20px;
+  }
+
+  .enrollment-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .enrollment-footer {
+    padding: 15px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .enrollment-header h1 {
+    font-size: 20px;
+  }
+
+  .enrollment-status h2 {
+    font-size: 18px;
+  }
+
+  .enrollment-status p {
+    font-size: 14px;
+  }
+}

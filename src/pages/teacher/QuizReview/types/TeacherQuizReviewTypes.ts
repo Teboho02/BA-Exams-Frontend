@@ -8,6 +8,15 @@ export interface Answer {
     answerOrder: number;
 }
 
+export interface ShortAnswerOption {
+    id: string;
+    question_id: string;
+    answer_text: string;
+    is_case_sensitive: boolean;
+    is_exact_match: boolean;
+    answer_order: number;
+}
+
 export interface Question {
     id: string;
     questionNumber: number;
@@ -17,6 +26,10 @@ export interface Question {
     points: number;
     imageUrl: string | null;
     answers: Answer[];
+    // Add short answer properties from your API
+    shortAnswerMatchType?: string | null;
+    shortAnswerCaseSensitive?: boolean | null;
+    shortAnswerOptions?: ShortAnswerOption[];
 }
 
 export interface Student {
@@ -66,12 +79,27 @@ export interface StudentAnswer {
     gradingNotes?: string | null;
 }
 
+// types/TeacherQuizReviewTypes.ts
 export interface StudentReview {
-    student: Student;
-    submission: Submission | null;
-    answers: { [questionId: string]: StudentAnswer } | null;
-    allAttempts: Submission[];
+    student: {
+        id: string;
+        name: string | null;
+        email: string;
+        avatarUrl: string | null;
+    };
     status: 'submitted' | 'not_submitted';
+    submission: {
+        id: string;
+        submittedAt: string;
+        score: number;
+        percentage: number;
+        letterGrade: string;
+        performanceLevel: string;
+        status: string;
+        gradedAt: string;
+        timeSpent: number | null;
+    } | null;
+    answers: Record<string, any>; // Flexible for now
 }
 
 export interface Assignment {
@@ -102,25 +130,31 @@ export interface Course {
     description: string;
 }
 
+// types/TeacherQuizReviewTypes.ts
+
+// ... your other interfaces remain the same ...
+
 export interface Statistics {
     totalStudents: number;
     submittedCount: number;
-    gradedCount: number;
     notSubmittedCount: number;
+    gradedCount: number;
     averageScore: number;
     averagePercentage: number;
-    completionRate: number;
-    totalSubmissions: number;
-    gradeDistribution: {
-        A: number;
-        B: number;
-        C: number;
-        D: number;
-        F: number;
-        'Not Graded': number;
-    };
-    highestScore: number;
-    lowestScore: number;
+    submissionRate: number; // Fixed typo: was "submisionRate"
+    // Remove these properties since they're not in your API response
+    // completionRate?: number;
+    // totalSubmissions?: number;
+    // gradeDistribution?: {
+    //     A: number;
+    //     B: number;
+    //     C: number;
+    //     D: number;
+    //     F: number;
+    //     'Not Graded': number;
+    // };
+    // highestScore?: number;
+    // lowestScore?: number;
 }
 
 export interface QuizReviewData {
@@ -134,6 +168,8 @@ export interface QuizReviewData {
     lastUpdated: string;
     maxPoints: number;
 }
+
+// ... rest of your interfaces ...
 
 // Additional types for manual grading functionality
 export interface GradeUpdateRequest {

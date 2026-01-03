@@ -10,11 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-navigation/bottom-tabs": "^7.4.9",
+    "@react-navigation/stack": "^7.4.10",
+    "@supabase/supabase-js": "^2.75.0",
     "katex": "^0.16.22",
     "lucide-react": "^0.536.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-katex": "^3.1.0",
+    "react-native-paper": "^5.14.5",
     "react-router-dom": "^7.7.1"
   },
   "devDependencies": {

@@ -515,6 +515,19 @@ const LandingPage: React.FC = () => {
                   Register
                 </button>
               </p>
+                  <p className="modal-footer-text">
+                Forgot your password{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeModals();
+                    navigate('/request-reset');
+                  }}  
+                  className="modal-link"
+                >
+                  Reset password
+                </button>
+              </p>
             </div>
           </div>
         </div>

@@ -10,17 +10,15 @@ import {
     StudentDetailModal
 } from './components';
 import type { QuizReviewData, StudentAnswer } from './types/TeacherQuizReviewTypes';
-// import type { GradeUpdateRequest, GradeUpdateResponse } from  './types/ManualGradingExtensions';
-import './TeacherQuizReviewPage.css';
-    
-//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import { API_BASE_URL } from '../../../config/api';
+import './TeacherQuizReviewPage.css';
 
 const TeacherQuizReviewPage: React.FC = () => {
     const { quizId } = useParams<{ quizId: string }>();
     const navigate = useNavigate();
     const [data, setData] = useState<QuizReviewData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
     const [filterStatus, setFilterStatus] = useState<'all' | 'submitted' | 'not_submitted'>('all');
     const [sortBy, setSortBy] = useState<'name' | 'score' | 'submission_date'>('name');
@@ -30,7 +28,8 @@ const TeacherQuizReviewPage: React.FC = () => {
         const fetchQuizData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(API_BASE_URL+`/api/teacher-review/${quizId}`, {
+                setError(null);
+                const response = await fetch(`${API_BASE_URL}/api/teacher-review/assignments/${quizId}/scores`, {
                     credentials: 'include',
                     method: 'GET',
                     headers: {
@@ -38,10 +37,28 @@ const TeacherQuizReviewPage: React.FC = () => {
                     },
                 });
 
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch quiz data: ${response.status}`);
+                }
+
                 const result = await response.json();
-                setData(result);
+                
+                // Transform the API response to match the expected structure
+                const transformedData: QuizReviewData = {
+                    ...result,
+                    // Add empty questions array if missing
+                    questions: result.questions || [],
+                    // Ensure studentReviews have answers
+                    studentReviews: result.studentReviews?.map((review: any) => ({
+                        ...review,
+                        answers: review.answers || {}
+                    })) || []
+                };
+                
+                setData(transformedData);
             } catch (error) {
                 console.error('Error fetching quiz data:', error);
+                setError(error instanceof Error ? error.message : 'Failed to load quiz data');
             } finally {
                 setLoading(false);
             }
@@ -67,58 +84,122 @@ const TeacherQuizReviewPage: React.FC = () => {
         };
     }, [selectedStudent]);
 
-    // Updated handleGradeUpdate to properly update local state
-    const handleGradeUpdate = (studentId: string, questionId: string, points: number, totalScore: number) => {
-        setData(prevData => {
-            if (!prevData) return prevData;
-            
-            return {
-                ...prevData,
-                studentReviews: prevData.studentReviews.map(review => {
-                    if (review.student.id === studentId && review.answers) {
-                        // Update the specific question's answer
+    // Fixed handleGradeUpdate function
+    const handleGradeUpdate = async (studentId: string, questionId: string, points: number, totalScore: number) => {
+
+        console.log(totalScore);
+        if (!data) return;
+
+        try {
+            // Optional: Send update to backend
+            // await fetch(`${API_BASE_URL}/api/teacher-review/assignments/${quizId}/grade`, {
+            //     method: 'POST',
+            //     credentials: 'include',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify({
+            //         studentId,
+            //         questionId,
+            //         points,
+            //         totalScore
+            //     }),
+            // });
+
+            // Update local state
+            setData(prevData => {
+                if (!prevData) return prevData;
+                
+                const updatedStudentReviews = prevData.studentReviews.map(review => {
+                    if (review.student.id === studentId) {
                         const updatedAnswers = {
                             ...review.answers,
                             [questionId]: {
-                                ...review.answers[questionId],
+                                ...review.answers?.[questionId],
                                 pointsEarned: points,
                                 isCorrect: points > 0,
                                 isGraded: true
                             } as StudentAnswer
                         };
 
-                        // Calculate new percentage based on total possible points
+                        // Calculate total score from all answers
+                        const calculatedTotalScore = Object.values(updatedAnswers).reduce(
+                            (sum, answer) => sum + (answer.pointsEarned || 0), 
+                            0
+                        );
+
                         const totalPossiblePoints = prevData.questions.reduce((sum, q) => sum + q.points, 0);
-                        const newPercentage = totalPossiblePoints > 0 ? Math.round((totalScore / totalPossiblePoints) * 100) : 0;
+                        const newPercentage = totalPossiblePoints > 0 ? 
+                            Math.round((calculatedTotalScore / totalPossiblePoints) * 100) : 0;
 
                         return {
                             ...review,
                             answers: updatedAnswers,
                             submission: review.submission ? {
                                 ...review.submission,
-                                score: totalScore,
+                                score: calculatedTotalScore,
                                 percentage: newPercentage,
                                 letterGrade: calculateLetterGrade(newPercentage),
                                 performanceLevel: calculatePerformanceLevel(newPercentage),
                                 status: 'graded' as const,
                                 gradedAt: new Date().toISOString()
-                            } : null
+                            } : review.submission
                         };
                     }
                     return review;
-                }),
-                // Update statistics
-                statistics: {
-                    ...prevData.statistics,
-                    // Recalculate statistics based on updated data
-                    averageScore: calculateAverageScore(prevData.studentReviews, studentId, totalScore),
-                    averagePercentage: calculateAveragePercentage(prevData.studentReviews, studentId, totalScore, prevData.questions)
-                }
-            };
-        });
+                });
+
+                // Recalculate statistics
+                const newStatistics = calculateStatistics(updatedStudentReviews, prevData.questions);
+
+                return {
+                    ...prevData,
+                    studentReviews: updatedStudentReviews,
+                    statistics: newStatistics
+                };
+            });
+
+        } catch (error) {
+            console.error('Error updating grade:', error);
+            // You might want to show an error message to the user here
+        }
     };
 
-    // Helper functions for score calculation
+    // Helper function to calculate statistics
+    const calculateStatistics = (studentReviews: any[], questions: any[]) => {
+        console.log(questions);
+        const submittedReviews = studentReviews.filter(review => review.submission);
+        const totalStudents = studentReviews.length;
+        const submittedCount = submittedReviews.length;
+        const notSubmittedCount = totalStudents - submittedCount;
+        const gradedCount = submittedReviews.filter(review => 
+            review.submission?.status === 'graded'
+        ).length;
+
+        // Calculate average score and percentage
+        let totalScore = 0;
+        let totalPercentage = 0;
+        
+        submittedReviews.forEach(review => {
+            totalScore += review.submission?.score || 0;
+            totalPercentage += review.submission?.percentage || 0;
+        });
+
+        const averageScore = submittedCount > 0 ? Math.round(totalScore / submittedCount) : 0;
+        const averagePercentage = submittedCount > 0 ? Math.round(totalPercentage / submittedCount) : 0;
+        const submissionRate = totalStudents > 0 ? Math.round((submittedCount / totalStudents) * 100) : 0;
+
+        return {
+            totalStudents,
+            submittedCount,
+            notSubmittedCount,
+            gradedCount,
+            averageScore,
+            averagePercentage,
+            submissionRate
+        };
+    };
+
     const calculateLetterGrade = (percentage: number): string => {
         if (percentage >= 90) return 'A';
         if (percentage >= 80) return 'B';
@@ -127,45 +208,14 @@ const TeacherQuizReviewPage: React.FC = () => {
         return 'F';
     };
 
-    const calculatePerformanceLevel = (percentage: number): any => {
+    const calculatePerformanceLevel = (percentage: number): string => {
         if (percentage >= 85) return 'excellent';
         if (percentage >= 75) return 'good';
         if (percentage >= 60) return 'satisfactory';
         return 'needs_attention';
     };
 
-    const calculateAverageScore = (studentReviews: any[], updatedStudentId: string, newScore: number): number => {
-        const submittedReviews = studentReviews.filter(review => review.submission);
-        if (submittedReviews.length === 0) return 0;
-
-        const totalScore = submittedReviews.reduce((sum, review) => {
-            if (review.student.id === updatedStudentId) {
-                return sum + newScore;
-            }
-            return sum + (review.submission?.score || 0);
-        }, 0);
-
-        return Math.round(totalScore / submittedReviews.length);
-    };
-
-    const calculateAveragePercentage = (studentReviews: any[], updatedStudentId: string, newScore: number, questions: any[]): number => {
-        const submittedReviews = studentReviews.filter(review => review.submission);
-        if (submittedReviews.length === 0) return 0;
-
-        const totalPossiblePoints = questions.reduce((sum, q) => sum + q.points, 0);
-        
-        const totalPercentage = submittedReviews.reduce((sum, review) => {
-            let score = review.submission?.score || 0;
-            if (review.student.id === updatedStudentId) {
-                score = newScore;
-            }
-            const percentage = totalPossiblePoints > 0 ? (score / totalPossiblePoints) * 100 : 0;
-            return sum + percentage;
-        }, 0);
-
-        return Math.round(totalPercentage / submittedReviews.length);
-    };
-
+    // Filter and sort students
     const filteredStudents = data?.studentReviews.filter(review => {
         const matchesStatus = filterStatus === 'all' || review.status === filterStatus;
         const matchesSearch = 
@@ -208,10 +258,21 @@ const TeacherQuizReviewPage: React.FC = () => {
         );
     }
 
+    if (error) {
+        return (
+            <Layout role="teacher">
+                <div className="error">
+                    <p>Failed to load quiz data</p>
+                    <p className="error-detail">{error}</p>
+                </div>
+            </Layout>
+        );
+    }
+
     if (!data) {
         return (
             <Layout role="teacher">
-                <div className="error">Failed to load quiz data</div>
+                <div className="error">No quiz data available</div>
             </Layout>
         );
     }

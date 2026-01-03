@@ -9,6 +9,8 @@ import PublicRoute from './components/PublicRoute';
 // Pages
 import LandingPage from './pages/LandingPage';
 import RegisterPage from './pages/RegisterPage';
+import RequestResetPage from './pages/RequestResetPage';
+import NewPasswordPage from './pages/NewPasswordPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -27,6 +29,9 @@ import StudentCourses from './pages/student/StudentAllCourses/StudentCourses';
 import QuizAttemptPage from './pages/student/QuizAttemptPage/QuizAttemptPage';
 import StudentCoursePage from './pages/student/StudentCoursePage/StudentCoursePage';
 import StudentQuizReview from './pages/student/StudentQuizReview/StudentQuizReview';
+import EnrollmentPage from './pages/EnrollmentPage';
+
+
 
 const App: React.FC = () => {
   return (
@@ -43,6 +48,23 @@ const App: React.FC = () => {
             <RegisterPage />
           </PublicRoute>
         } />
+
+        <Route path="/request-reset" element={
+          <PublicRoute>
+            <RequestResetPage />
+          </PublicRoute>
+        } />
+
+        <Route path="/reset-password/" element={
+          <PublicRoute>
+            <NewPasswordPage />
+          </PublicRoute>
+        } />
+
+
+
+        <Route path="/enroll/:courseName/:token" element={<EnrollmentPage />} />
+
 
         {/* Admin Routes - only accessible by admins */}
         <Route path="/admin" element={

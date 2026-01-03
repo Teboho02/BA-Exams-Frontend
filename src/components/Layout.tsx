@@ -56,17 +56,17 @@ const fetchRegistrationRequests = async () => {
     if (response.ok) {
       const data = await response.json();
       
+     //  console.log("Testing, "import.meta.env.VITE_API_BASE_URL);
+
       // Handle the API response structure correctly
       // API returns: { success: true, count: 1, requests: [...] }
       const allRequests = Array.isArray(data.requests) ? data.requests : [];
       
       // IMPORTANT: Filter to only show pending requests
       const pendingRequests = allRequests.filter((req: RegistrationRequest) => {
-        console.log(`Request ${req.id} status: ${req.status}`); // Debug log
         return req.status === 'pending';
       });
       
-      console.log('All requests:', allRequests.length, 'Pending only:', pendingRequests.length); // Debug log
       
       setRegistrationRequests(pendingRequests);
       

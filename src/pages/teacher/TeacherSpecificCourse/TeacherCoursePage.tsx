@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import './TeacherCoursePage.css';
-//const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import { API_BASE_URL } from '../../../config/api';
-
 
 interface Assignment {
   id: string;
@@ -33,11 +31,43 @@ interface CourseInfo {
   title: string;
 }
 
+interface RegistrationLink {
+  id: string;
+  token: string;
+  url: string;
+  isUsed: boolean;
+  expiresAt: string;
+  maxUses: number;
+  currentUses: number;
+  notes?: string;
+  createdAt: string;
+  usedAt?: string;
+  usedBy?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  isExpired: boolean;
+  isValid: boolean;
+}
+
 interface ApiResponse {
   success: boolean;
   assignments: Assignment[];
   count: number;
   course: CourseInfo;
+}
+
+interface RegistrationLinksResponse {
+  success: boolean;
+  links: RegistrationLink[];
+  count: number;
+}
+
+interface LinkOptions {
+  expiresInDays: number;
+  maxUses: number;
+  notes: string;
 }
 
 const TeacherCoursePage: React.FC = () => {
@@ -48,7 +78,17 @@ const TeacherCoursePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isStudentView, setIsStudentView] = useState(false);
-
+  
+  // Registration links state
+  const [registrationLinks, setRegistrationLinks] = useState<RegistrationLink[]>([]);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [linkOptions, setLinkOptions] = useState<LinkOptions>({
+    expiresInDays: 7,
+    maxUses: 1,
+    notes: ''
+  });
+  const [generatingLinks, setGeneratingLinks] = useState(false);
+  const [showLinksView, setShowLinksView] = useState(false);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -80,7 +120,6 @@ const TeacherCoursePage: React.FC = () => {
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
-        // If unauthorized, redirect to login
         if (err instanceof Error && err.message.includes('Unauthorized')) {
           // You might want to redirect to login page
           // navigate('/login');
@@ -94,6 +133,92 @@ const TeacherCoursePage: React.FC = () => {
       fetchAssignments();
     }
   }, [courseId]);
+
+  const fetchRegistrationLinks = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/registration-links`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch registration links');
+      }
+      
+      const data: RegistrationLinksResponse = await response.json();
+      if (data.success) {
+        setRegistrationLinks(data.links || []);
+      }
+    } catch (err) {
+      console.error('Error fetching registration links:', err);
+      setError('Failed to load registration links');
+    }
+  };
+
+  const generateRegistrationLink = async () => {
+    if (linkOptions.expiresInDays < 1 || linkOptions.expiresInDays > 365) {
+      alert('Expiration must be between 1 and 365 days');
+      return;
+    }
+
+    if (linkOptions.maxUses < 1 || linkOptions.maxUses > 1000) {
+      alert('Max uses must be between 1 and 1000');
+      return;
+    }
+
+    setGeneratingLinks(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/courses/${courseId}/registration-links`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(linkOptions)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create registration link');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setShowRegistrationModal(false);
+        setLinkOptions({ expiresInDays: 7, maxUses: 1, notes: '' });
+        setShowLinksView(true);
+        // Refresh the links list
+        await fetchRegistrationLinks();
+        alert('Registration link created successfully!');
+      }
+    } catch (err) {
+      console.error('Error generating registration link:', err);
+      alert(err instanceof Error ? err.message : 'Failed to create registration link');
+    } finally {
+      setGeneratingLinks(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Link copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+      alert('Failed to copy link');
+    });
+  };
+
+  // Load registration links when needed
+  useEffect(() => {
+    if (courseId && showLinksView) {
+      fetchRegistrationLinks();
+    }
+  }, [courseId, showLinksView]);
 
   const getStatusBadge = (assignment: Assignment) => {
     const now = new Date();
@@ -143,18 +268,16 @@ const TeacherCoursePage: React.FC = () => {
     });
   };
 
-const handleAssignmentClick = (assignment: Assignment) => {
-  if (assignment.assignment_type === 'quiz') {
-    // Navigate to quiz review page
-    navigate(`/teacher/quiz-review/${assignment.id}`);
-  } else {
-    // Navigate to assignment detail page
-    navigate(`/teacher/courses/${courseId}/assignment/${assignment.id}`);
-  }
-};
+  const handleAssignmentClick = (assignment: Assignment) => {
+    if (assignment.assignment_type === 'quiz') {
+      navigate(`/teacher/quiz-review/${assignment.id}`);
+    } else {
+      navigate(`/teacher/courses/${courseId}/assignment/${assignment.id}`);
+    }
+  };
+
   const handleCreateAssignment = () => {
-    // Navigate to create assignment page
-  navigate(`/teacher/courses/${courseId}/assignments/create`);
+    navigate(`/teacher/courses/${courseId}/assignments/create`);
   };
 
   if (loading) {
@@ -191,12 +314,14 @@ const handleAssignmentClick = (assignment: Assignment) => {
                 <h1>{course?.title || 'Course'}</h1>
                 <p className="course-code">Course ID: {courseId}</p>
               </div>
-              <button 
-                className={`view-toggle-btn ${isStudentView ? 'student-view' : 'teacher-view'}`}
-                onClick={() => setIsStudentView(!isStudentView)}
-              >
-                {isStudentView ? '👨‍🎓 Student View' : '👨‍🏫 Teacher View'}
-              </button>
+              <div className="course-controls">
+                <button 
+                  className={`view-toggle-btn ${isStudentView ? 'student-view' : 'teacher-view'}`}
+                  onClick={() => setIsStudentView(!isStudentView)}
+                >
+                  {isStudentView ? 'Student View' : 'Teacher View'}
+                </button>
+              </div>
             </div>
             
             <div className="course-meta">
@@ -215,6 +340,68 @@ const handleAssignmentClick = (assignment: Assignment) => {
             </div>
           </div>
         </div>
+
+        {/* Registration Management Section */}
+        {!isStudentView && (
+          <div className="enrollment-section">
+   
+
+            {/* Registration Links View */}
+            {showLinksView && (
+              <div className="enrollment-links-container">
+                {registrationLinks.length === 0 ? (
+                  <p>No registration links generated yet.</p>
+                ) : (
+                  <div className="enrollment-links-list">
+                    <div className="links-summary">
+                      <span>Total: {registrationLinks.length} | </span>
+                      <span>Used: {registrationLinks.filter(l => l.currentUses >= l.maxUses).length} | </span>
+                      <span>Available: {registrationLinks.filter(l => l.isValid).length} | </span>
+                      <span>Expired: {registrationLinks.filter(l => l.isExpired).length}</span>
+                    </div>
+                    {registrationLinks.map((link) => (
+                      <div key={link.id} className={`enrollment-link-item ${
+                        link.isExpired ? 'expired' : 
+                        link.currentUses >= link.maxUses ? 'used' : 
+                        'available'
+                      }`}>
+                        <div className="link-info">
+                          <div className="link-url">
+                            <code>{link.url}</code>
+                          </div>
+                          <div className="link-meta">
+                            <span>Created: {formatDate(link.createdAt)}</span>
+                            <span>Expires: {formatDate(link.expiresAt)}</span>
+                            <span>Uses: {link.currentUses}/{link.maxUses}</span>
+                            {link.notes && <span>Notes: {link.notes}</span>}
+                            {link.isExpired && <span className="status-expired">Expired</span>}
+                            {!link.isExpired && link.currentUses >= link.maxUses && (
+                              <span className="status-used">Fully Used</span>
+                            )}
+                            {link.isValid && <span className="status-available">Available</span>}
+                            {link.usedBy && (
+                              <span>Used by: {link.usedBy.firstName} {link.usedBy.lastName} ({link.usedBy.email})</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="link-actions">
+                          {link.isValid && (
+                            <button
+                              className="action-btn copy-btn"
+                              onClick={() => copyToClipboard(link.url)}
+                            >
+                              Copy
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="assignments-section">
           <div className="section-header-row">
@@ -240,7 +427,6 @@ const handleAssignmentClick = (assignment: Assignment) => {
               {assignments
                 .filter(assignment => !isStudentView || assignment.is_published)
                 .sort((a, b) => {
-                  // Sort by due date (null dates at the end)
                   if (!a.due_date && !b.due_date) return 0;
                   if (!a.due_date) return 1;
                   if (!b.due_date) return -1;
@@ -332,14 +518,13 @@ const handleAssignmentClick = (assignment: Assignment) => {
                             navigate(`/teacher/courses/${courseId}/assignment/${assignment.id}/edit`);
                           }}
                         >
-                          ✏️ Edit
+                          Edit
                         </button>
                         {!assignment.is_published && (
                           <button 
                             className="action-btn publish-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Handle publish action
                               console.log('Publishing assignment:', assignment.id);
                               fetch(`${API_BASE_URL}/api/assignments/${assignment.id}/publish`, {
                                 credentials: 'include',
@@ -359,11 +544,9 @@ const handleAssignmentClick = (assignment: Assignment) => {
                                   }
                                 })
                                 .catch(err => console.error('Error publishing assignment:', err));
-
-                              
                             }}
                           >
-                            📤 Publish
+                            Publish
                           </button>
                         )}
                       </div>
@@ -373,6 +556,77 @@ const handleAssignmentClick = (assignment: Assignment) => {
             </div>
           )}
         </div>
+
+        {/* Registration Link Generation Modal */}
+        {showRegistrationModal && (
+          <div className="modal-overlay" onClick={() => setShowRegistrationModal(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Generate Registration Link</h3>
+                <button 
+                  className="close-btn"
+                  onClick={() => setShowRegistrationModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="modal-body">
+                <p>Create a registration link for students to join this course.</p>
+                
+                <div className="form-group">
+                  <label htmlFor="expiresInDays">Expires in (days):</label>
+                  <input
+                    type="number"
+                    id="expiresInDays"
+                    min="1"
+                    max="365"
+                    value={linkOptions.expiresInDays}
+                    onChange={(e) => setLinkOptions({
+                      ...linkOptions, 
+                      expiresInDays: parseInt(e.target.value) || 1
+                    })}
+                  />
+                  <small>1-365 days</small>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="maxUses">Maximum uses:</label>
+                  <input
+                    type="number"
+                    id="maxUses"
+                    min="1"
+                    max="1000"
+                    value={linkOptions.maxUses}
+                    onChange={(e) => setLinkOptions({
+                      ...linkOptions, 
+                      maxUses: parseInt(e.target.value) || 1
+                    })}
+                  />
+                  <small>1-1000 uses (1 = single-use link)</small>
+                </div>
+
+              </div>
+              
+              <div className="modal-actions">
+                <button
+                  className="btn-cancel"
+                  onClick={() => setShowRegistrationModal(false)}
+                  disabled={generatingLinks}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn-generate"
+                  onClick={generateRegistrationLink}
+                  disabled={generatingLinks}
+                >
+                  {generatingLinks ? 'Generating...' : 'Generate Link'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

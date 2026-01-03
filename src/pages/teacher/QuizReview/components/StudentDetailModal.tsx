@@ -32,7 +32,6 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
 
     console.log(assignment);
-
     // Initialize grading state for ALL questions (not just essays)
     React.useEffect(() => {
         const initialState: typeof gradingState = {};
@@ -341,14 +340,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                         <div className="submission-details">
                             <div className="submission-header">
                                 <div className="submission-meta">
-                                    <span>
-                                        Attempt {selectedStudentData.submission.attemptNumber} of {selectedStudentData.submission.totalAttempts}
-                                    </span>
-                                    {selectedStudentData.submission.timeSpentMinutes && (
-                                        <span>
-                                            Time Spent: {selectedStudentData.submission.timeSpentMinutes} minutes
-                                        </span>
-                                    )}
+                              
                                     <span>
                                         Submitted: {formatDateTime(selectedStudentData.submission.submittedAt)}
                                     </span>
@@ -411,8 +403,32 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
 
                                         {answer ? (
                                             <div className="student-answer-section">
+                                                {/* Use enhanced QuestionReview component for all question types */}
+                                                {question.questionType !== 'essay' && (
+                                                    <div className="question-details-section">
+                                                        <QuestionReview
+                                                            question={question}
+                                                            studentAnswer={answer}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* For essay questions, show student answer directly */}
+                                                {question.questionType === 'essay' && (
+                                                    <div className="student-answer-display">
+                                                        <h5>Student Answer:</h5>
+                                                        <div
+                                                            className="student-answer"
+                                                            style={{ color: 'black', fontSize: '16px' }}
+                                                        >
+                                                            {renderTextWithLatex(answer.studentAnswerText || 'No answer provided')}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {/* Manual Grading Section for ALL question types */}
                                                 <div className="manual-grading-section">
+                                                    <h5>Grading:</h5>
                                                     {grading?.isEditing ? (
                                                         <div className="grading-form">
                                                             <div className="points-input-group">
@@ -475,33 +491,15 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                                                                     )}
                                                                 </div>
                                                             </div>
+
+                                                            {isManualGrade && (
+                                                                <div className="override-notice">
+                                                                    <em>This question has been manually graded and overrides the automatic result.</em>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
-
-                                                <h5>Student Answer:</h5>
-                                                <div
-                                                    className="student-answer"
-                                                    style={{ color: 'black', fontSize: '16px' }}
-                                                >
-                                                    {renderTextWithLatex(answer.studentAnswerText || 'No answer provided')}
-                                                </div>
-
-                                                {/* Show original question review for non-essay questions */}
-                                                {question.questionType !== 'essay' && (
-                                                    <div className="original-grading-info">
-                                                        <h5>Question Details:</h5>
-                                                        <QuestionReview
-                                                            question={question}
-                                                            studentAnswer={answer}
-                                                        />
-                                                        {isManualGrade && (
-                                                            <div className="override-notice">
-                                                                <em>Note: This question has been manually graded and may override the automatic result shown above.</em>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
                                             </div>
                                         ) : (
                                             <div className="no-answer">
