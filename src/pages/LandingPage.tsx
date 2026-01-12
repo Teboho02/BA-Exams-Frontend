@@ -61,6 +61,7 @@ const LandingPage: React.FC = () => {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [loginError, setLoginError] = useState<string>('');
   const [registerError, setRegisterError] = useState<string>('');
+  //const [registerSuccess, setRegisterSuccess] = useState<string>('');
 
   const handleLoginInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -82,7 +83,7 @@ const LandingPage: React.FC = () => {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginLoading(false);
+    setLoginLoading(true);
     setLoginError('');
 
     try {
@@ -189,7 +190,6 @@ const LandingPage: React.FC = () => {
 
   const switchToRegister = () => {
     setShowLogin(false);
-
     setShowRegister(true);
     setLoginError('');
   };
@@ -442,43 +442,30 @@ const LandingPage: React.FC = () => {
             <form onSubmit={handleLoginSubmit} className="modal-form">
               <div className="form-group">
                 <label htmlFor="login-email" className="form-label">Email Address</label>
-                <div className="input-wrapper">
-                  <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  <input
-                    type="email"
-                    id="login-email"
-                    name="email"
-                    value={loginData.email}
-                    onChange={handleLoginInputChange}
-                    className="form-input"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
+                <input
+                  type="email"
+                  id="login-email"
+                  name="email"
+                  value={loginData.email}
+                  onChange={handleLoginInputChange}
+                  className="form-input"
+                  placeholder="Enter your email"
+                  required
+                />
               </div>
 
               <div className="form-group">
                 <label htmlFor="login-password" className="form-label">Password</label>
-                <div className="input-wrapper">
-                  <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <circle cx="12" cy="16" r="1"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <input
-                    type="password"
-                    id="login-password"
-                    name="password"
-                    value={loginData.password}
-                    onChange={handleLoginInputChange}
-                    className="form-input"
-                    placeholder="Enter your password"
-                    required
-                  />
-                </div>
+                <input
+                  type="password"
+                  id="login-password"
+                  name="password"
+                  value={loginData.password}
+                  onChange={handleLoginInputChange}
+                  className="form-input"
+                  placeholder="Enter your password"
+                  required
+                />
               </div>
 
               {loginError && (
@@ -515,8 +502,8 @@ const LandingPage: React.FC = () => {
                   Register
                 </button>
               </p>
-                  <p className="modal-footer-text">
-                Forgot your password{' '}
+              <p className="modal-footer-text">
+                Forgot your password?{' '}
                 <button
                   type="button"
                   onClick={() => {
@@ -544,7 +531,16 @@ const LandingPage: React.FC = () => {
               </svg>
             </button>
             
-       
+            <div className="modal-header">
+              <div className="modal-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+              </div>
+              <h2 className="modal-title">Create Account</h2>
+              <p className="modal-subtitle">Register for online examinations</p>
+            </div>
 
             <form onSubmit={handleRegisterSubmit} className="modal-form">
               <div className="form-row">
@@ -579,10 +575,7 @@ const LandingPage: React.FC = () => {
               <div className="form-group">
                 <label htmlFor="register-email" className="form-label">Email Address</label>
                 <div className="input-wrapper">
-                  <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
+            
                   <input
                     type="email"
                     id="register-email"
@@ -599,11 +592,7 @@ const LandingPage: React.FC = () => {
               <div className="form-group">
                 <label htmlFor="register-password" className="form-label">Password</label>
                 <div className="input-wrapper">
-                  <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <circle cx="12" cy="16" r="1"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
+        
                   <input
                     type="password"
                     id="register-password"
@@ -620,11 +609,7 @@ const LandingPage: React.FC = () => {
               <div className="form-group">
                 <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
                 <div className="input-wrapper">
-                  <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <circle cx="12" cy="16" r="1"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
+            
                   <input
                     type="password"
                     id="confirmPassword"

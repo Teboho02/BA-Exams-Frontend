@@ -1,5 +1,5 @@
 // TeacherQuizReviewPage.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import {
@@ -9,9 +9,84 @@ import {
     StudentsSection,
     StudentDetailModal
 } from './components';
-import type { QuizReviewData, StudentAnswer } from './types/TeacherQuizReviewTypes';
+import type { QuizReviewData, StudentAnswer, Question, StudentReview, Answer, ShortAnswerOption } from './types/TeacherQuizReviewTypes';
 import { API_BASE_URL } from '../../../config/api';
 import './TeacherQuizReviewPage.css';
+
+// Define the API response type for student details
+interface StudentDetailAPIResponse {
+    assignment: {
+        id: string;
+        title: string;
+        description: string;
+        maxPoints: number;
+        dueDate: string;
+        assignmentType: string;
+    };
+    course: {
+        id: string;
+        title: string;
+        code: string;
+    };
+    student: {
+        id: string;
+        name: string;
+        email: string;
+        avatarUrl: string | null;
+    };
+    submission: {
+        id: string;
+        submittedAt: string;
+        status: string;
+        score: number;
+        percentage: number;
+        letterGrade: string;
+        performanceLevel: string;
+        feedback?: string;
+        attemptNumber: number;
+        timeStarted: string;
+        timeCompleted: string;
+        autoSubmitted: boolean;
+        gradedAt: string | null;
+        gradedBy: string | null;
+    } | null;
+    questions: Array<{
+        id: string;
+        questionNumber: number;
+        title: string;
+        questionText: string;
+        questionType: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
+        points: number;
+        imageUrl?: string;
+        answers?: Array<{
+            id: string;
+            answer_text: string;
+            is_correct: boolean;
+            feedback?: string;
+            answer_order?: number;
+        }>;
+        shortAnswerOptions?: Array<{
+            id: string;
+            question_id: string;
+            answer_text: string;
+            is_case_sensitive: boolean;
+            is_exact_match: boolean;
+            answer_order: number;
+        }>;
+        shortAnswerMatchType?: string | null;
+        shortAnswerCaseSensitive?: boolean | null;
+        studentAnswer?: {
+            answer_text?: string;
+            correct_answer_text?: string;
+            selected_answer_id?: string;
+            is_correct: boolean;
+            points_earned: number;
+            is_graded: boolean;
+            manually_graded?: boolean;
+        };
+    }>;
+    hasSubmitted: boolean;
+}
 
 const TeacherQuizReviewPage: React.FC = () => {
     const { quizId } = useParams<{ quizId: string }>();
@@ -20,6 +95,8 @@ const TeacherQuizReviewPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+    const [selectedStudentDetails, setSelectedStudentDetails] = useState<StudentReview & { questions: Question[] } | null>(null);
+    const [loadingStudentDetails, setLoadingStudentDetails] = useState(false);
     const [filterStatus, setFilterStatus] = useState<'all' | 'submitted' | 'not_submitted'>('all');
     const [sortBy, setSortBy] = useState<'name' | 'score' | 'submission_date'>('name');
     const [searchQuery, setSearchQuery] = useState('');
@@ -56,9 +133,11 @@ const TeacherQuizReviewPage: React.FC = () => {
                 };
                 
                 setData(transformedData);
-            } catch (error) {
-                console.error('Error fetching quiz data:', error);
-                setError(error instanceof Error ? error.message : 'Failed to load quiz data');
+
+                console.log("Data at this point is", transformedData);
+            } catch (err) {
+                console.error('Error fetching quiz data:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load quiz data');
             } finally {
                 setLoading(false);
             }
@@ -69,9 +148,155 @@ const TeacherQuizReviewPage: React.FC = () => {
         }
     }, [quizId]);
 
+
+    
+    // Fetch detailed student data when a student is selected
+    
+    // Replace the fetchStudentDetails useEffect in TeacherQuizReviewPage.tsx with this updated version
+
+useEffect(() => {
+    const fetchStudentDetails = async () => {
+        if (!selectedStudent) {
+            setSelectedStudentDetails(null);
+            return;
+        }
+
+        try {
+            setLoadingStudentDetails(true);
+            
+            // First, get the submission ID for this student
+            const studentReview = data?.studentReviews.find(
+                review => review.student.id === selectedStudent
+            );
+            
+            if (!studentReview?.submission?.id) {
+                throw new Error('No submission found for this student');
+            }
+
+            const submissionId = studentReview.submission.id;
+
+            // Fetch detailed results using the new endpoint
+            const response = await fetch(
+                `${API_BASE_URL}/api/assignments/submission/${submissionId}/results/${quizId}`,
+                {
+                    credentials: 'include',
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch student details: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error('Failed to fetch submission results');
+            }
+
+            // Parse the quizData JSON string
+            const quizData = JSON.parse(result.submission.quizData);
+
+            // Transform the data to match StudentReview type
+            const transformedData: StudentReview = {
+                student: studentReview.student,
+                submission: {
+                    id: result.submission.id,
+                    submittedAt: result.submission.submittedAt,
+                    score: result.submission.score,
+                    percentage: studentReview.submission?.percentage || 0,
+                    letterGrade: studentReview.submission?.letterGrade || 'F',
+                    performanceLevel: studentReview.submission?.performanceLevel || 'needs_attention',
+                    status: result.submission.status,
+                    gradedAt: result.submission.submittedAt,
+                    timeSpent: null // Can calculate if you have timeStarted and timeCompleted
+                },
+                answers: {},
+                status: 'submitted'
+            };
+
+            // Transform questions and build answers object
+            const transformedQuestions: Question[] = result.questions.map((q: any, index: number) => {
+                const questionId = q.id;
+                const studentAnswerData = quizData.answers[questionId];
+                const detailedResult = quizData.detailedResults[questionId];
+
+                // Build StudentAnswer object
+                if (studentAnswerData && detailedResult) {
+                    const correctAnswer = q.quiz_question_answers?.find((a: any) => a.is_correct);
+                    const studentSelectedAnswer = q.quiz_question_answers?.find(
+                        (a: any) => a.id === studentAnswerData.answerId
+                    );
+
+                    transformedData.answers[questionId] = {
+                        questionNumber: index + 1,
+                        questionText: q.question_text,
+                        questionPoints: q.points,
+                        studentAnswerId: studentAnswerData.answerId || null,
+                        studentAnswerText: studentSelectedAnswer?.answer_text || studentAnswerData.textAnswer || '',
+                        correctAnswerId: correctAnswer?.id || '',
+                        correctAnswerText: correctAnswer?.answer_text || '',
+                        isCorrect: detailedResult.correct || false,
+                        pointsEarned: detailedResult.points || 0,
+                        feedback: null,
+                        isGraded: true,
+                        manuallyGraded: detailedResult.requiresManualGrading || false,
+                        gradedBy: null,
+                        gradingNotes: null
+                    };
+                }
+
+                // Build Question object
+                return {
+                    id: q.id,
+                    questionNumber: index + 1,
+                    title: q.title,
+                    questionText: q.question_text,
+                    questionType: 'multiple_choice', // You may need to add this field to the API response
+                    points: q.points,
+                    imageUrl: null,
+                    answers: q.quiz_question_answers?.map((a: any) => ({
+                        id: a.id,
+                        answerText: a.answer_text,
+                        isCorrect: a.is_correct,
+                        feedback: a.feedback || '',
+                        answerOrder: a.answer_order || 0
+                    })) || [],
+                    shortAnswerMatchType: null,
+                    shortAnswerCaseSensitive: null,
+                    shortAnswerOptions: []
+                };
+            });
+
+            setSelectedStudentDetails({
+                ...transformedData,
+                questions: transformedQuestions
+            });
+
+            console.log("Student details loaded:", {
+                submission: result.submission,
+                quizData,
+                transformedQuestions
+            });
+        } catch (err) {
+            console.error('Error fetching student details:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+            alert('Failed to load student details: ' + errorMessage);
+        } finally {
+            setLoadingStudentDetails(false);
+        }
+    };
+
+    fetchStudentDetails();
+}, [selectedStudent, quizId, data?.studentReviews]);
+
     useEffect(() => {
         if (selectedStudent) {
             document.body.style.overflow = 'hidden';
+            console.log("The selected student is:", selectedStudent);
             document.body.classList.add('modal-open');
         } else {
             document.body.style.overflow = 'unset';
@@ -86,26 +311,10 @@ const TeacherQuizReviewPage: React.FC = () => {
 
     // Fixed handleGradeUpdate function
     const handleGradeUpdate = async (studentId: string, questionId: string, points: number, totalScore: number) => {
-
         console.log(totalScore);
         if (!data) return;
 
         try {
-            // Optional: Send update to backend
-            // await fetch(`${API_BASE_URL}/api/teacher-review/assignments/${quizId}/grade`, {
-            //     method: 'POST',
-            //     credentials: 'include',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify({
-            //         studentId,
-            //         questionId,
-            //         points,
-            //         totalScore
-            //     }),
-            // });
-
             // Update local state
             setData(prevData => {
                 if (!prevData) return prevData;
@@ -159,9 +368,8 @@ const TeacherQuizReviewPage: React.FC = () => {
                 };
             });
 
-        } catch (error) {
-            console.error('Error updating grade:', error);
-            // You might want to show an error message to the user here
+        } catch (err) {
+            console.error('Error updating grade:', err);
         }
     };
 
@@ -242,10 +450,6 @@ const TeacherQuizReviewPage: React.FC = () => {
         }
     });
 
-    const selectedStudentData = selectedStudent
-        ? data?.studentReviews.find(review => review.student.id === selectedStudent)
-        : null;
-
     const closeModal = () => {
         setSelectedStudent(null);
     };
@@ -307,10 +511,10 @@ const TeacherQuizReviewPage: React.FC = () => {
                     assignment={data.assignment}
                 />
 
-                {selectedStudentData && (
+                {selectedStudent && selectedStudentDetails && !loadingStudentDetails && (
                     <StudentDetailModal
-                        selectedStudentData={selectedStudentData}
-                        questions={data.questions}
+                        selectedStudentData={selectedStudentDetails}
+                        questions={selectedStudentDetails.questions || []}
                         assignment={data.assignment}
                         closeModal={closeModal}
                         onGradeUpdate={handleGradeUpdate}
