@@ -331,17 +331,60 @@ const AssignmentCreator: React.FC = () => {
     }));
   }, []);
 
-  const handleImageUpload = useCallback((questionId: number, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageUrl = e.target?.result as string;
-        updateQuestion(questionId, { imageUrl });
-      };
-      reader.readAsDataURL(file);
+
+  const handleImageUpload = useCallback(async (questionId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    alert('Please select an image file');
+    return;
+  }
+
+  // Validate file size (5MB limit)
+  const maxSize = 5 * 1024 * 1024;
+  if (file.size > maxSize) {
+    alert('Image size must be less than 5MB');
+    return;
+  }
+
+  try {
+    // Show loading state (optional - you might want to add a loading indicator)
+    updateQuestion(questionId, { imageUrl: 'uploading...' });
+
+    // Create form data
+    const formData = new FormData();
+    formData.append('image', file);
+
+    // Upload to S3 via API
+    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+      // Note: Don't set Content-Type header - browser will set it automatically with boundary
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to upload image');
     }
-  }, [updateQuestion]);
+
+    const data = await response.json();
+
+    if (data.success && data.url) {
+      // Update question with the public URL from S3
+      updateQuestion(questionId, { imageUrl: data.url });
+    } else {
+      throw new Error('Invalid response from upload server');
+    }
+  } catch (error) {
+    console.error('Image upload error:', error);
+    alert(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    // Clear the loading state
+    updateQuestion(questionId, { imageUrl: undefined });
+  }
+}, [updateQuestion]);
 
   const removeImage = useCallback((questionId: number) => {
     updateQuestion(questionId, { imageUrl: undefined });
@@ -458,7 +501,6 @@ const AssignmentCreator: React.FC = () => {
         payload.availableUntil = new Date(assignment.availableUntil).toISOString();
       }
 
-      console.log('Sending payload to API:', JSON.stringify(payload, null, 2));
 
       // Determine API endpoint and method
       const url = isEditing
@@ -585,7 +627,7 @@ const AssignmentCreator: React.FC = () => {
         {/* Header */}
         <AssignmentHeader
           assignment={assignment}
-          questions={questions}  // Add this line
+          questions={questions}  
           totalPoints={totalPoints}
           isEditing={isEditing}
           isSaving={isSaving}
