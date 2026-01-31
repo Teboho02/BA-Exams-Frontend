@@ -98,11 +98,9 @@ const LandingPage: React.FC = () => {
 
       const data: LoginResponse = await response.json();
 
-      console.log("The response/data is: ", data);
 
       if (data.success && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
-        console.log("User data saved to localStorage:", data.user); 
 
         switch (data.user.role) {
           case 'admin':
@@ -156,7 +154,6 @@ const LandingPage: React.FC = () => {
 
       const data: RegisterResponse = await response.json();
 
-      console.log("The register response/data is: ", data);
 
       if (data.success) {
         // Registration successful, show login form
@@ -244,7 +241,7 @@ const LandingPage: React.FC = () => {
 
       {/* Hero Section */}
       <section className="hero-section">
-        <div className="container">
+        <div className="container-landing-page">
           <div className="hero-content">
             <h1 className="hero-title">
               Bethunana Academy
@@ -254,7 +251,7 @@ const LandingPage: React.FC = () => {
               The official online testing platform for Bethunana Academy students. Access your examinations, 
               track your progress, and achieve academic excellence through our comprehensive digital learning environment.
             </p>
-            <div className="hero-buttons">
+            <div className="hero-buttons-landing-page">
               <button
                 onClick={() => setShowLogin(true)}
                 className="btn-hero-primary"
@@ -279,7 +276,7 @@ const LandingPage: React.FC = () => {
 
       {/* Features Section */}
       <section className="features-section">
-        <div className="container">
+        <div className="container-landing-page">
           <div className="section-header">
             <h2 className="section-title">BA Online Testing Platform Features</h2>
             <p className="section-description">
@@ -339,7 +336,7 @@ const LandingPage: React.FC = () => {
 
       {/* About Section */}
       <section className="about-section">
-        <div className="container">
+        <div className="container-landing-page">
           <div className="about-grid">
             <div className="about-content">
               <h2 className="about-title">About Bethunana Academy Online Tests</h2>
@@ -381,7 +378,7 @@ const LandingPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="footer">
-        <div className="container">
+        <div className="container-landing-page">
           <div className="footer-grid">
             <div className="footer-brand">
               <div className="footer-logo">
@@ -482,7 +479,6 @@ const LandingPage: React.FC = () => {
               >
                 {loginLoading ? (
                   <>
-                    <span className="spinner"></span>
                     Signing in...
                   </>
                 ) : (

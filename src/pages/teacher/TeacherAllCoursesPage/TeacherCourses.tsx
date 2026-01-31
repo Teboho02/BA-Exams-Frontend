@@ -233,7 +233,6 @@ const handleCreateCourse = async (courseData: Omit<Course, 'id' | 'teacherId' | 
       
       // Show success message instead of console.log
       // You might want to add a success state to show user feedback
-      console.log('Course created successfully!');
       
     } else {
       setError(data.message || 'Failed to create course');

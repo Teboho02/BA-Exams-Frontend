@@ -18,7 +18,6 @@ export const useAuth = () => {
   useEffect(() => {
     const getUserFromStorage = (): User | null => {
       try {
-        console.log("Checking localStorage for user data...");
         const userString = localStorage.getItem('user');
         if (!userString) return null;
         return JSON.parse(userString);

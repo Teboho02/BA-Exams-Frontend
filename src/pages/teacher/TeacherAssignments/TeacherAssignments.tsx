@@ -407,24 +407,43 @@ const AssignmentCreator: React.FC = () => {
         throw new Error('At least one question is required');
       }
 
-      // Validate questions
-      for (const question of questions) {
-        if (!question.text.trim()) {
-          throw new Error(`Question "${question.title}" must have question text`);
-        }
+   // Replace your validation section with this:
 
-        if (question.type === 'multiple_choice' || question.type === 'true_false') {
-          const validAnswers = question.answers.filter(a => a.text.trim());
-          if (validAnswers.length < 2) {
-            throw new Error(`Question "${question.title}" must have at least 2 valid answers`);
-          }
+// Validate questions
+for (const question of questions) {
+  if (!question.text.trim()) {
+    throw new Error(`Question "${question.title}" must have question text`);
+  }
 
-          const hasCorrectAnswer = question.answers.some(a => a.correct && a.text.trim());
-          if (!hasCorrectAnswer) {
-            throw new Error(`Question "${question.title}" must have a correct answer selected`);
-          }
-        }
-      }
+  if (question.type === 'multiple_choice' || question.type === 'true_false') {
+    // Filter out answers that are empty or just contain quotes/whitespace
+    const validAnswers = question.answers.filter(a => {
+      if (!a.text) return false;
+      
+      // Clean the text - remove quotes, whitespace, and common LaTeX empty values
+
+      console.warn("a.text ", a.text);
+      const cleanText = a.text
+        .replace(/^["']+|["']+$/g, '')  // Remove surrounding quotes
+        .replace(/\\quad|\\qquad|\\,|\\;|\\:|\\!|\\\\/g, '')  // Remove LaTeX whitespace
+        .trim();
+      
+      return cleanText.length > 0;
+    });
+    
+    if (validAnswers.length < 2) {
+
+      throw new Error(`Question "${question.title}" must have at least 2 valid answers (found ${validAnswers.length})`);
+    }
+
+    // Check if at least one valid answer is marked as correct
+    const hasCorrectAnswer = validAnswers.some(a => a.correct);
+    
+    if (!hasCorrectAnswer) {
+      throw new Error(`Question "${question.title}" must have a correct answer selected`);
+    }
+  }
+}
 
       const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
 
@@ -521,8 +540,6 @@ const AssignmentCreator: React.FC = () => {
 
       // Get response text first
       const responseText = await response.text();
-      console.log('Response status:', response.status);
-      console.log('Response text:', responseText);
 
       // Try to parse as JSON
       let responseData;
@@ -561,7 +578,6 @@ const AssignmentCreator: React.FC = () => {
         throw new Error(errorMessage);
       }
 
-      console.log(`Quiz ${isEditing ? 'updated' : 'saved'} successfully:`, responseData);
 
       // Update the local state with the new published status
       setAssignment(prev => ({

@@ -525,7 +525,6 @@ const TeacherCoursePage: React.FC = () => {
                             className="action-btn publish-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log('Publishing assignment:', assignment.id);
                               fetch(`${API_BASE_URL}/api/assignments/${assignment.id}/publish`, {
                                 credentials: 'include',
                                 method: 'PATCH',

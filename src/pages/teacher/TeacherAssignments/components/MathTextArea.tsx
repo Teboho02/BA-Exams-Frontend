@@ -1,4 +1,5 @@
-  // components/MathTextArea.tsx
+//@ts-nocheck
+// components/MathTextArea.tsx
   import React, { useState, useRef, useEffect } from 'react';
   import { Calculator } from 'lucide-react';
   import MathSymbolPicker from '../../../utils/MathSymbolPicker';
@@ -123,7 +124,6 @@
         const end = textarea.selectionEnd;
         
         const wrappedLatex = `$${latex}$`;
-        console.log(symbol, latex, wrappedLatex);
         
         let cursorPositionAdjustment = 0;
         let insertText = wrappedLatex;
@@ -133,7 +133,6 @@
           insertText = wrappedLatex.replace('{}', '{');
           cursorPositionAdjustment = 1;
 
-          console.log(index, wrappedLatex, insertText);
         }
         
         const newValue = value.substring(0, start) + insertText + value.substring(end);

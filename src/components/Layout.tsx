@@ -1,3 +1,4 @@
+//@ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Layout.css';
@@ -56,7 +57,6 @@ const fetchRegistrationRequests = async () => {
     if (response.ok) {
       const data = await response.json();
       
-     //  console.log("Testing, "import.meta.env.VITE_API_BASE_URL);
 
       // Handle the API response structure correctly
       // API returns: { success: true, count: 1, requests: [...] }
@@ -115,7 +115,6 @@ const handleRegistrationAction = async (requestId: string, action: 'approve' | '
       
       // Show success message (you can implement a toast notification system)
       const message = result.message || (action === 'approve' ? 'Student approved successfully!' : 'Student request rejected.');
-      console.log(message);
       
       // Optional: You could show a toast notification here
       // toast.success(message);
@@ -161,7 +160,6 @@ const handleRegistrationAction = async (requestId: string, action: 'approve' | '
     if (!userData.id || !userData.role) {
       throw new Error('Invalid user data');
     }
-    console.log("✅ User authenticated via Layout:", userData);
     setIsAuthenticated(true);
   } catch (err) {
     console.error('Error parsing user data:', err);

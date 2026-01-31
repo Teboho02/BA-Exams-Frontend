@@ -135,7 +135,6 @@ const TeacherQuizReviewPage: React.FC = () => {
                 
                 setData(transformedData);
 
-                console.log("Data at this point is", transformedData);
             } catch (err) {
                 console.error('Error fetching quiz data:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load quiz data');
@@ -297,7 +296,6 @@ useEffect(() => {
     useEffect(() => {
         if (selectedStudent) {
             document.body.style.overflow = 'hidden';
-            console.log("The selected student is:", selectedStudent);
             document.body.classList.add('modal-open');
         } else {
             document.body.style.overflow = 'unset';
@@ -312,7 +310,6 @@ useEffect(() => {
 
     // Fixed handleGradeUpdate function
     const handleGradeUpdate = async (studentId: string, questionId: string, points: number, totalScore: number) => {
-        console.log(totalScore);
         if (!data) return;
 
         try {
@@ -376,7 +373,6 @@ useEffect(() => {
 
     // Helper function to calculate statistics
     const calculateStatistics = (studentReviews: any[], questions: any[]) => {
-        console.log(questions);
         const submittedReviews = studentReviews.filter(review => review.submission);
         const totalStudents = studentReviews.length;
         const submittedCount = submittedReviews.length;

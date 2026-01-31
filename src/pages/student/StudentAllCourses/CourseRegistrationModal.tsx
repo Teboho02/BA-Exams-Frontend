@@ -43,9 +43,6 @@ const CourseRegistrationModal: React.FC<CourseRegistrationModalProps> = ({
         })
       });
 
-      // Add debugging
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       // Check if response is HTML instead of JSON
       const contentType = response.headers.get('content-type');

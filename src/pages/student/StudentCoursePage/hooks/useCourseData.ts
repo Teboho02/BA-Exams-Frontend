@@ -63,10 +63,8 @@ export const useCourseData = (courseId: string | undefined) => {
         if (data.success) {
           const publishedAssignments = data.assignments?.filter((assignment: Assignment) => assignment.is_published) || [];
           setAssignments(publishedAssignments);
-          console.log('📝 Published assignments loaded:', publishedAssignments.length);
         }
       } else {
-        console.log('No assignments found or error fetching assignments');
         setAssignments([]);
       }
     } catch (err) {

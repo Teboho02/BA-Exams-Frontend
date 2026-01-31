@@ -157,6 +157,10 @@ const QuizAttemptPage: React.FC = () => {
 
       if (data.success && data.assignment) {
         // Only allow quiz assignments
+
+        if(data.assignment.dueDate < new Date().toISOString()) {
+            setError('Time to take the quiz has passed.');
+        }
         if (data.assignment.assignmentType !== 'quiz') {
           setError('This assignment is not a quiz');
           return;

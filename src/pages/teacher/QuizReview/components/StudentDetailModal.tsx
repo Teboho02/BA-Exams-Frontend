@@ -1,3 +1,4 @@
+//@ts-nocheck
 // components/StudentDetailModal.tsx
 import React, { useState } from 'react';
 import type { StudentReview, Question, Assignment } from '../types/TeacherQuizReviewTypes';
@@ -31,8 +32,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
     }>({});
 
 
-    console.log(assignment);
-    console.log("Questions", questions);
+
     // Initialize grading state for ALL questions (not just essays)
     React.useEffect(() => {
         const initialState: typeof gradingState = {};
@@ -123,13 +123,6 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({
                     newTotalScore
                 );
             }
-
-            console.log('Grade saved successfully:', {
-                questionId,
-                points: grading.points,
-                totalScore: newTotalScore,
-                isFullyGraded: result.data?.isFullyGraded
-            });
 
             // Show success feedback
             if (saveButton) {

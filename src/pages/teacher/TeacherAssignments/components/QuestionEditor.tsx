@@ -1,8 +1,7 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import { Plus, Trash2, Image, X } from 'lucide-react';
 import type { Question, Answer } from '../types/Assignment';
-import { MathTextArea } from './MathTextArea';
-import { MathInput } from './MathInput';
+import MathEditorV2 from '../../../../components/MathEditor/MathEditor';
 
 interface QuestionEditorProps {
     question: Question;
@@ -27,6 +26,11 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = React.memo(({
     onImageUpload,
     onRemoveImage
 }) => {
+
+
+    useEffect(() => {
+  console.log('Question answers:', question.answers);
+}, [question.answers]);
     return (
         <div className="question-editor card">
             <div className="question-editor-header">
@@ -69,12 +73,11 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = React.memo(({
 
             <div className="form-group">
                 <label className="form-label">Question Text</label>
-                <MathTextArea
+                <MathEditorV2
                     value={question.text}
                     onChange={(value) => onUpdateQuestion({ text: value })}
-                    placeholder="Enter your question..."
-                    className="form-textarea"
-                    style={{ height: '96px' }}
+                    defaultMode="text"
+                    showToolbar={true}
                 />
             </div>
 
@@ -126,23 +129,18 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = React.memo(({
                                 {answer.correct && <div className="correct-indicator" />}
                             </button>
                             <div className="answer-inputs">
-                                <MathInput
+                                <MathEditorV2
                                     value={answer.text}
                                     onChange={(value: string) => onUpdateAnswer(answer.id, 'text', value)}
                                     placeholder={`Answer ${index + 1}`}
-                                    className="answer-input"
+                                    defaultMode="text"
+                                    showToolbar={true}
                                 />
-                                <MathInput
-                                    value={answer.feedback}
-                                    onChange={(value: string) => onUpdateAnswer(answer.id, 'feedback', value)}
-                                    placeholder="Answer feedback (optional)"
-                                    className="feedback-input"
-                                />
-
+                        
                             </div>
                             {question.answers.length > 2 && (
                                 <button
-                                    onClick={() => onDeleteAnswer(answer.id)}
+                                    onClick={() => onDeleteAnswer(answer.id)}   
                                     className="icon-btn danger"
                                     style={{ marginTop: '4px' }}
                                     type="button"
@@ -216,21 +214,24 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = React.memo(({
                     {/* Acceptable answers input */}
                     {(!question.acceptableAnswers || question.acceptableAnswers.length === 0 ? [''] : question.acceptableAnswers).map((answer, index) => (
                         <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                            <MathInput
-                                value={answer}
-                                onChange={(value: string) => {
-                                    const newAnswers = [...(question.acceptableAnswers || [''])];
-                                    newAnswers[index] = value;
-                                    onUpdateQuestion({ acceptableAnswers: newAnswers });
-                                }}
-                                placeholder={
-                                    question.matchType === 'regex'
-                                        ? 'Enter regex pattern (e.g., ^\\d{4}$)'
-                                        : `Acceptable answer ${index + 1}`
-                                }
-                                className="form-input"
-                                style={{ flex: 1 }}
-                            />
+                            <div style={{ flex: 1 }}>
+                                <MathEditorV2
+                                    value={answer}
+                                    onChange={(value: string) => {
+                                        const newAnswers = [...(question.acceptableAnswers || [''])];
+                                        newAnswers[index] = value;
+                                        onUpdateQuestion({ acceptableAnswers: newAnswers });
+                                    }}
+                                    placeholder={
+                                        question.matchType === 'regex'
+                                            ? 'Enter regex pattern (e.g., ^\\d{4}$)'
+                                            : `Acceptable answer ${index + 1}`
+                                    }
+                                    defaultMode="text"
+                                    showToolbar={false}
+                                    compact={true}
+                                />
+                            </div>
                             {(question.acceptableAnswers?.length || 1) > 1 && (
                                 <button
                                     onClick={() => {

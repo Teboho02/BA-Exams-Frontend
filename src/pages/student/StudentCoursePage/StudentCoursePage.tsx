@@ -31,7 +31,6 @@ const StudentCoursePage: React.FC = () => {
   };
 
   const handleAssignmentClick = (assignment: Assignment) => {
-    console.log('Opening assignment:', assignment);
     
     if (assignment.assignment_type === 'quiz') {
       navigate(`/student/quizAttempt/${assignment.id}`);

@@ -1,3 +1,4 @@
+//@ts-nocheck
 import React, { useState, useEffect } from 'react';
 import Layout from '../../../components/Layout';
 import { useNavigate } from 'react-router-dom';
@@ -84,7 +85,6 @@ const StudentCourses: React.FC = () => {
   // Get unique subjects for filter dropdown
   const uniqueSubjects = Array.from(new Set(courses.map(enrollment => enrollment.course.subject)));
 
-  console.log('Unique Subjects:', uniqueSubjects);
   
   const fetchEnrolledCourses = async () => {
     try {
@@ -192,7 +192,6 @@ const StudentCourses: React.FC = () => {
   };
 
   const handleRegistrationSuccess = () => {
-    console.log('Registration request submitted successfully');
     // Refresh the requests to show the new one
     fetchRegistrationRequests();
     // Switch to requests tab to show the new request
