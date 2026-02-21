@@ -125,10 +125,6 @@ math-field::part(virtual-keyboard-toggle) {
   display: none;
 }
 
-/* Only highlight actual mathematical expressions when selected, not text mode content */
-math-field .ML__base:not(.ML__text) ::selection {
-  background: rgba(74, 144, 226, 0.2);
-}
 
 math-field .ML__base:not(.ML__text) ::-moz-selection {
   background: rgba(74, 144, 226, 0.2);
@@ -426,5 +422,5 @@ button:focus-visible {
 }
 
 math-field::part(menu-toggle) {
-  display: none;
+  display: none; 
 } 

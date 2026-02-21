@@ -10,6 +10,91 @@ interface QuestionReviewCardProps {
   canViewAnswers: boolean;
 }
 
+const extractDisplaylines = (content: string): string => {
+  const keyword = '\\displaylines{';
+  let result = content;
+  let searchFrom = 0;
+
+  while (true) {
+    const idx = result.indexOf(keyword, searchFrom);
+    if (idx === -1) break;
+
+    const openBrace = idx + keyword.length - 1;
+    let depth = 0;
+    let closeIdx = -1;
+
+    for (let i = openBrace; i < result.length; i++) {
+      if (result[i] === '{') depth++;
+      else if (result[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          closeIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (closeIdx === -1) break;
+
+    const before = result.slice(0, idx);
+    const after = result.slice(closeIdx + 1);
+    const beforeMatch = before.match(/^([\s\S]*?)(\$\$?)\s*$/);
+    const afterMatch = after.match(/^\s*(\$\$?)([\s\S]*)$/);
+
+    let prefix = before;
+    let suffix = after;
+
+    if (beforeMatch && afterMatch && beforeMatch[2] === afterMatch[1]) {
+      prefix = beforeMatch[1];
+      suffix = afterMatch[2];
+    }
+
+    const inner = result.slice(openBrace + 1, closeIdx);
+    const lines = inner.split(/\\\\/).map(l => l.trim()).join(' \\\\ ');
+    const replacement = `$$\\begin{aligned}${lines}\\end{aligned}$$`;
+
+    result = prefix + replacement + suffix;
+    searchFrom = prefix.length + replacement.length;
+  }
+
+  return result;
+};
+
+const renderTextWithLatex = (text: string): React.ReactElement => {
+  if (!text) return <span></span>;
+
+  const processedText = extractDisplaylines(text);
+  const regex = /(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g;
+  const rawTokens = processedText.split(regex).filter(Boolean);
+
+  const tokens = rawTokens.map((token, index) => {
+    if (token.startsWith('$$') && token.endsWith('$$')) {
+      const latex = token.slice(2, -2).trim();
+      try {
+        const html = katex.renderToString(latex, { displayMode: true, throwOnError: false, strict: false });
+        return <div key={index} dangerouslySetInnerHTML={{ __html: html }} style={{ margin: '10px 0', textAlign: 'center' }} />;
+      } catch {
+        return <span key={index} style={{ color: '#ef4444' }}>{token}</span>;
+      }
+    }
+
+    if (token.startsWith('$') && token.endsWith('$') && token.length > 1) {
+      const latex = token.slice(1, -1).trim();
+      if (!latex) return <React.Fragment key={index}>{token}</React.Fragment>;
+      try {
+        const html = katex.renderToString(latex, { displayMode: false, throwOnError: false, strict: false });
+        return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />;
+      } catch {
+        return <span key={index} style={{ color: '#ef4444' }}>{token}</span>;
+      }
+    }
+
+    return <React.Fragment key={index}>{token}</React.Fragment>;
+  });
+
+  return <>{tokens}</>;
+};
+
 const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   question,
   quizDetails,
@@ -20,133 +105,31 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
   const detailedResult = quizDetails.detailedResults[questionId];
   const pointsAwarded = detailedResult?.points || 0;
   const requiresManualGrading = detailedResult?.requiresManualGrading;
-  
-  // Fix: Determine if answer is correct based on points earned vs total points
-  // For manually graded questions, check if points earned equals total points
-  // For auto-graded questions, use the 'correct' property if available, otherwise fall back to points comparison
-  const isCorrect = detailedResult?.correct !== undefined 
-    ? detailedResult.correct 
+
+  const isCorrect = detailedResult?.correct !== undefined
+    ? detailedResult.correct
     : pointsAwarded === question.points;
-
-  // Helper function to render text with LaTeX support
-  const renderTextWithLatex = (text: string): React.ReactElement => {
-    if (!text) return <span></span>;
-
-    // Split text by $ patterns for display math and $ patterns for inline math
-    const parts: React.ReactNode[] = [];
-    let currentIndex = 0;
-    
-    // First handle display math ($...$)
-    const displayMathRegex = /\$\$(.*?)\$\$/g;
-    let match;
-    
-    while ((match = displayMathRegex.exec(text)) !== null) {
-      // Add text before the math
-      if (match.index > currentIndex) {
-        const beforeText = text.slice(currentIndex, match.index);
-        parts.push(...renderInlineMath(beforeText, parts.length));
-      }
-      
-      // Render display math
-      try {
-        const mathHtml = katex.renderToString(match[1], {
-          displayMode: true,
-          throwOnError: false,
-          strict: false
-        });
-        parts.push(
-          <div 
-            key={parts.length} 
-            dangerouslySetInnerHTML={{ __html: mathHtml }}
-            style={{ margin: '10px 0', textAlign: 'center' }}
-          />
-        );
-      } catch (e) {
-        // Fallback for invalid LaTeX
-        parts.push(<span key={parts.length} style={{ color: '#ef4444' }}>$${match[1]}$$</span>);
-      }
-      
-      currentIndex = match.index + match[0].length;
-    }
-    
-    // Add remaining text
-    if (currentIndex < text.length) {
-      const remainingText = text.slice(currentIndex);
-      parts.push(...renderInlineMath(remainingText, parts.length));
-    }
-    
-    return <>{parts}</>;
-  };
-
-  // Helper function to handle inline math ($...$) in text
-  const renderInlineMath = (text: string, startKey: number): React.ReactNode[] => {
-    const parts: React.ReactNode[] = [];
-    let currentIndex = 0;
-    
-    // Handle inline math ($...$) but not double dollars
-    const inlineMathRegex = /(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)/g;
-    let match;
-    
-    while ((match = inlineMathRegex.exec(text)) !== null) {
-      // Add text before the math
-      if (match.index > currentIndex) {
-        parts.push(text.slice(currentIndex, match.index));
-      }
-      
-      // Render inline math
-      try {
-        const mathHtml = katex.renderToString(match[1], {
-          displayMode: false,
-          throwOnError: false,
-          strict: false
-        });
-        parts.push(
-          <span 
-            key={startKey + parts.length} 
-            dangerouslySetInnerHTML={{ __html: mathHtml }}
-          />
-        );
-      } catch (e) {
-        // Fallback for invalid LaTeX
-        parts.push(<span key={startKey + parts.length} style={{ color: '#ef4444' }}>${match[1]}$</span>);
-      }
-      
-      currentIndex = match.index + match[0].length;
-    }
-    
-    // Add remaining text
-    if (currentIndex < text.length) {
-      // Handle $\\newline$ patterns
-      const remaining = text.slice(currentIndex).replace(/\$\\newline\$/g, '\n');
-      parts.push(remaining);
-    }
-    
-    return parts;
-  };
 
   const renderStudentAnswer = (question: QuizQuestion, studentAnswer: any) => {
     if (!studentAnswer) {
       return <span style={{ color: '#ef4444' }}>No answer provided</span>;
     }
-    
+
     if (question.quiz_question_answers.length > 0) {
-      // Multiple choice or true/false
       const selectedAnswerId = studentAnswer.answerId;
       const selectedAnswer = question.quiz_question_answers.find(a => a.id === selectedAnswerId);
       return selectedAnswer ? renderTextWithLatex(selectedAnswer.answer_text) : <span>Unknown answer</span>;
     }
-    
-    // Short answer or essay
+
     if (studentAnswer.textAnswer) {
       return renderTextWithLatex(studentAnswer.textAnswer);
     }
-    
+
     return null;
   };
 
   const renderCorrectAnswer = (question: QuizQuestion) => {
     if (question.quiz_question_answers.length > 0) {
-      // Multiple choice questions - show correct answers
       const correctAnswers = question.quiz_question_answers.filter(a => a.is_correct);
       return (
         <div>
@@ -159,7 +142,6 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
         </div>
       );
     } else {
-      // Short answer questions - extract expected answer from question text or show a message
       const expectedAnswer = extractExpectedAnswer(question.question_text);
       if (expectedAnswer) {
         return (
@@ -173,19 +155,12 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
     }
   };
 
-  // Helper function to extract expected answer from question text
   const extractExpectedAnswer = (questionText: string): string | null => {
-    // Common patterns for short answer questions
     const patterns = [
-      // "Answer michael" -> "michael"
       /answer\s+"?([^"?\n]+)"?/i,
-      // "Type hello" -> "hello"  
       /type\s+"?([^"?\n]+)"?/i,
-      // "Enter the value" -> look for specific formats
       /enter\s+"?([^"?\n]+)"?/i,
-      // "Write the coordinates in the form (x,y)" -> look for coordinate format
       /form\s+\(([^)]+)\)/i,
-      // Look for mathematical expressions in parentheses
       /answer.*\(([^)]+)\)/i,
     ];
 
@@ -196,16 +171,13 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
       }
     }
 
-    // For coordinate questions, if we see "turning point" or "form (x,y)", 
-    // we know it expects coordinates but can't determine the exact answer
-    if (questionText.toLowerCase().includes('turning point') || 
-        questionText.toLowerCase().includes('form (x,y)')) {
-      return null; // Will show "Multiple acceptable answers possible"
+    if (questionText.toLowerCase().includes('turning point') ||
+      questionText.toLowerCase().includes('form (x,y)')) {
+      return null;
     }
 
-    // For mathematical questions, check if there's a specific expected format
     if (questionText.includes('$') || questionText.includes('\\newline')) {
-      return null; // Mathematical expressions need manual review
+      return null;
     }
 
     return null;
@@ -222,9 +194,9 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {requiresManualGrading ? (
             <>
-              <span style={{ 
-                padding: '4px 8px', 
-                borderRadius: '4px', 
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
                 backgroundColor: '#fef3c7',
                 color: '#92400e',
                 fontWeight: '500'
@@ -235,9 +207,9 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
             </>
           ) : (
             <>
-              <span style={{ 
-                padding: '4px 8px', 
-                borderRadius: '4px', 
+              <span style={{
+                padding: '4px 8px',
+                borderRadius: '4px',
                 backgroundColor: isCorrect ? '#dcfce7' : '#fee2e2',
                 color: isCorrect ? '#166534' : '#991b1b',
                 fontWeight: '500'
@@ -253,17 +225,16 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
           )}
         </div>
       </div>
-      
+
       <div style={{ marginBottom: '16px', color: '#374151' }}>
         <div style={{ whiteSpace: 'pre-wrap' }}>{renderTextWithLatex(question.question_text)}</div>
       </div>
-      
+
       <div style={{ marginBottom: '16px', color: '#374151' }}>
         <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>Your Answer:</h4>
         {renderStudentAnswer(question, studentAnswer)}
       </div>
-      
-      {/* Show correct answers for both multiple choice AND short answer questions when allowed */}
+
       {canViewAnswers && !requiresManualGrading && (
         <div style={{ marginBottom: '16px', color: '#374151' }}>
           <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: 'black' }}>
@@ -272,7 +243,7 @@ const QuestionReviewCard: React.FC<QuestionReviewCardProps> = ({
           {renderCorrectAnswer(question)}
         </div>
       )}
-      
+
       {requiresManualGrading && (
         <div style={{ padding: '12px', backgroundColor: '#fef3c7', borderRadius: '6px', marginTop: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

@@ -6,6 +6,8 @@ export const calculateGradingStats = (questions: QuizQuestion[], quizDetails: Qu
   let totalGradedPossiblePoints = 0;
   let ungradedPoints = 0;
   
+
+  
   questions.forEach(question => {
     const result = quizDetails.detailedResults[question.id];
     if (result?.requiresManualGrading) {

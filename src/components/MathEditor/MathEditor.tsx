@@ -3,41 +3,45 @@ import React, { useRef, useEffect, useState } from "react";
 import ButtonGroup from "./ButtonGroup";
 import { tabs, allButtonGroups } from "./mathEditorConstants";
 import './MathEditor.css'
-// Helper function to convert old $...$ format to MathLive format
+
 const convertDollarSignsToLatex = (text: string): string => {
   if (!text) return '';
-  
-  // First, replace $\newline$ with LaTeX line breaks
   let converted = text.replace(/\$\\newline\$/g, '\\\\');
-  
-  // Remove $ delimiters - MathLive's smart mode will handle math vs text
-  // This converts $expression$ to just expression
   converted = converted.replace(/\$/g, '');
-  
-  // Clean up any double backslashes that might cause issues
   converted = converted.replace(/\\\\\s*\n/g, '\\\\ ');
-  
+  converted = converted.replace(/<(?!\\)/g, '\\lt ').replace(/>(?!\\)/g, '\\gt ');
   return converted.trim();
 };
 
-// 1. Manually define the MathFieldElement interface 
 interface MathFieldElement extends HTMLElement {
-  executeCommand: (command: string, ...args: any[]) => void;
+  executeCommand: (command: string | string[], ...args: any[]) => void;
   getValue: (format?: string) => string;
   setValue: (value: string) => void;
   focus: () => void;
   defaultMode: string;
   smartMode: boolean;
-  setOptions: (options: any) => void;
+  smartFence: boolean;
+  smartSuperscript: boolean;
+  mathVirtualKeyboardPolicy: string;
+  autoOperatorNames?: string[];
+  autoCommands?: string[];
+  inlineShortcuts?: any;
+  mode?: string;
 }
 
-// 2. Register the <math-field> tag in the JSX namespace
 declare global {
   namespace JSX {
     interface IntrinsicElements {
       'math-field': React.DetailedHTMLProps<React.HTMLAttributes<MathFieldElement>, MathFieldElement> & {
         'default-mode'?: string;
         'virtual-keyboard-mode'?: string;
+        'smart-mode'?: string;
+        'smart-fence'?: string;
+        'smart-superscript'?: string;
+        'auto-operator-names'?: string;
+        'auto-commands'?: string;
+        'inline-shortcuts'?: string;
+        onKeyDown?: React.KeyboardEventHandler<MathFieldElement>;
       };
     }
   }
@@ -47,147 +51,175 @@ interface MathEditorProps {
   value?: string;
   onChange?: (value: string) => void;
   placeholder?: string;
-  defaultMode?: 'math' | 'text';
   showToolbar?: boolean;
-  compact?: boolean; // New prop for compact mode
+  compact?: boolean;
+  defaultMode?: 'text' | 'math';
 }
 
 function MathEditorV2({ 
   value, 
   onChange, 
   placeholder = '',
-  defaultMode = 'text',
   showToolbar = true,
-  compact = false 
+  compact = false,
+  defaultMode = 'text'
 }: MathEditorProps) {
-  // Handle undefined or null values
   const safeValue = value ?? '';
   const mfRef = useRef<MathFieldElement>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [toolbarVisible, setToolbarVisible] = useState(false);
   const isControlledRef = useRef(false);
+  const isFocusedRef = useRef(false);
 
-  // Initialize the math field with the value prop
+  // Stable ref for onChange — always points to latest, never triggers re-registration
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  const [currentMode, setCurrentMode] = useState<'text' | 'math'>(defaultMode);
+
+  const syncMode = () => {
+    const mf = mfRef.current;
+    if (!mf) return;
+    const live = (mf.mode as string) ?? 'text';
+    const normalized: 'text' | 'math' = live === 'math' ? 'math' : 'text';
+    setCurrentMode(prev => prev !== normalized ? normalized : prev);
+  };
+
+  const applyMode = (mode: 'text' | 'math') => {
+    const mf = mfRef.current;
+    if (!mf) return;
+    mf.defaultMode = mode;
+    try {
+      mf.executeCommand(['switchMode', mode]);
+    } catch (_) {}
+    setCurrentMode(mode);
+    mf.focus();
+  };
+
+  const toggleMode = () => {
+    applyMode(currentMode === 'text' ? 'math' : 'text');
+  };
+
+  // Value sync — skips update while the user is actively focused to prevent stomping mid-type
   useEffect(() => {
     const mf = mfRef.current;
-    if (mf) {
-      const currentValue = mf.getValue();
-      // Clean the incoming value
-      let cleanValue = safeValue;
-      if (cleanValue === '""' || cleanValue === "''") {
-        cleanValue = '';
-      }
-      
-      // Convert old $...$ format to MathLive format
-      cleanValue = convertDollarSignsToLatex(cleanValue);
-      
-      if (currentValue !== cleanValue) {
-        mf.setValue(cleanValue);
-        isControlledRef.current = true;
-      }
+    if (!mf) return;
+
+    // Don't overwrite what the user is actively typing
+    if (isFocusedRef.current) return;
+
+    const currentValue = mf.getValue('latex');
+    let cleanValue = safeValue;
+    if (cleanValue === '""' || cleanValue === "''") cleanValue = '';
+    cleanValue = convertDollarSignsToLatex(cleanValue);
+
+    if (currentValue !== cleanValue) {
+      mf.setValue(cleanValue);
+      isControlledRef.current = true;
     }
   }, [safeValue]);
 
+  // Initialize math-field — empty deps so it only ever runs once
   useEffect(() => {
     const mf = mfRef.current;
-    if (mf) {
-      // Set default mode to text
-      mf.defaultMode = defaultMode;
-      
-      // Enable smart mode for automatic switching between text and math
-      mf.smartMode = true;
-      
-      // Configure options
-      mf.setOptions({
-        smartMode: true,
-        smartFence: true,
-        smartSuperscript: true,
-        // Disable virtual keyboard completely
-        mathVirtualKeyboardPolicy: 'manual',
-      });
+    if (!mf) return;
 
-      const handleInput = (e: Event) => {
-        let newValue = (e.target as MathFieldElement).getValue();
-        
-        // Clean up the value - remove surrounding quotes if they exist
-        if (newValue === '""' || newValue === "''") {
-          newValue = '';
-        }
-        
-        if (onChange && !isControlledRef.current) {
-          onChange(newValue);
-        }
-        isControlledRef.current = false;
-      };
+    mf.defaultMode = defaultMode;
+    mf.smartMode = false;
+    mf.smartFence = false;
+    mf.smartSuperscript = false;
+    mf.mathVirtualKeyboardPolicy = 'manual';
+    mf.autoOperatorNames = [];
+    mf.autoCommands = [];
+    mf.inlineShortcuts = {};
 
-      mf.addEventListener("input", handleInput);
-      return () => mf.removeEventListener("input", handleInput);
-    }
-  }, [onChange, defaultMode]);
-
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!mfRef.current || document.activeElement !== mfRef.current) return;
-
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        mfRef.current.executeCommand("insert", "\\\\");
-        return;
+    const handleInput = (e: Event) => {
+      let newValue = (e.target as MathFieldElement).getValue('latex');
+      if (newValue === '""' || newValue === "''") newValue = '';
+      // Normalize \lt / \gt back to < / > for clean storage
+      newValue = newValue.replace(/\\lt\s?/g, '<').replace(/\\gt\s?/g, '>');
+      if (onChangeRef.current && !isControlledRef.current) {
+        onChangeRef.current(newValue);
       }
-
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'f') {
-          e.preventDefault();
-          insertWithPlaceholder('\\frac{#0}{#0}');
-        } else if (e.key === 'r') {
-          e.preventDefault();
-          insertWithPlaceholder('\\sqrt{#0}');
-        }
-      }
+      isControlledRef.current = false;
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    const handleFocus = () => {
+      isFocusedRef.current = true;
+    };
 
-  const refocus = () => {
-    if (mfRef.current) mfRef.current.focus();
+    const handleBlur = () => {
+      isFocusedRef.current = false;
+    };
+
+    mf.addEventListener('input', handleInput);
+    mf.addEventListener('focus', handleFocus);
+    mf.addEventListener('blur', handleBlur);
+    mf.addEventListener('mode-change', syncMode);
+
+    return () => {
+      mf.removeEventListener('input', handleInput);
+      mf.removeEventListener('focus', handleFocus);
+      mf.removeEventListener('blur', handleBlur);
+      mf.removeEventListener('mode-change', syncMode);
+    };
+  }, []); // ← empty: register once, never re-register
+
+  const handleKeyDown = (e: React.KeyboardEvent<MathFieldElement>) => {
+    if (!mfRef.current) return;
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      mfRef.current.executeCommand('insert', '\\\\');
+      applyMode(currentMode);
+      return;
+    }
+
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'f') {
+        e.preventDefault();
+        insertWithPlaceholder('\\frac{#0}{#0}');
+      } else if (e.key === 'r') {
+        e.preventDefault();
+        insertWithPlaceholder('\\sqrt{#0}');
+      }
+    }
   };
 
+  const refocus = () => mfRef.current?.focus();
+
   const insert = (latexStr: string) => {
-    if (mfRef.current) {
-      mfRef.current.executeCommand("insert", latexStr);
-      refocus();
-    }
+    mfRef.current?.executeCommand('insert', latexStr);
+    refocus();
   };
 
   const insertWithPlaceholder = (latexStr: string) => {
-    if (mfRef.current) {
-      mfRef.current.executeCommand("insert", latexStr);
-      refocus();
-    }
+    mfRef.current?.executeCommand('insert', latexStr);
+    refocus();
   };
 
   const insertText = () => {
-    const text = prompt("Enter text to insert:");
+    const text = prompt('Enter text to insert:');
     if (text && mfRef.current) {
-      mfRef.current.executeCommand("insert", `\\text{${text}}`);
+      mfRef.current.executeCommand('insert', `\\text{${text}}`);
+      applyMode(currentMode);
       refocus();
     }
   };
 
-  const toggleToolbar = () => {
-    setToolbarVisible(!toolbarVisible);
-  };
+  const toggleToolbar = () => setToolbarVisible(!toolbarVisible);
+
+  const isMath = currentMode === 'math';
 
   return (
     <div className={`math-editor-container ${compact ? 'compact' : ''}`}>
       {!compact && (
         <div style={{ marginBottom: '15px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-      
           {showToolbar && (
-            <button 
+            <button
               type="button"
               onClick={toggleToolbar}
               className="toolbar-toggle"
@@ -196,14 +228,35 @@ function MathEditorV2({
               {toolbarVisible ? '▲ Hide Symbols' : '▼ Show Symbols'}
             </button>
           )}
-      
+
+          <button
+            type="button"
+            onClick={toggleMode}
+            className="mode-toggle"
+            title={isMath ? 'Switch to text mode' : 'Switch to math mode'}
+            style={{
+              background: isMath ? '#4a90e2' : 'white',
+              color: isMath ? 'white' : '#333',
+              borderColor: isMath ? '#4a90e2' : '#ddd',
+            }}
+          >
+            {isMath ? '∑ Math Mode' : 'Aa Text Mode'}
+          </button>
         </div>
       )}
 
-      <math-field 
-        ref={mfRef} 
+      <math-field
+        ref={mfRef}
         default-mode={defaultMode}
         placeholder={placeholder}
+        smart-mode="false"
+        smart-fence="false"
+        smart-superscript="false"
+        virtual-keyboard-mode="manual"
+        auto-operator-names=""
+        auto-commands=""
+        inline-shortcuts=""
+        onKeyDown={handleKeyDown}
       />
 
       {showToolbar && !compact && (

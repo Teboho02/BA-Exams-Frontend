@@ -103,7 +103,6 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
               onChange={(e) => handleQuestionTypeChange(e.target.value as Question['type'])}
             >
               <option value="multiple_choice">Multiple Choice</option>
-              <option value="true_false">True/False</option>
               <option value="short_answer">Short Answer</option>
               <option value="essay">Essay</option>
             </select>
