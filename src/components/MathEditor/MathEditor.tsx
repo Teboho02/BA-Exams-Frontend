@@ -1,5 +1,5 @@
 //@ts-nocheck
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import ButtonGroup from "./ButtonGroup";
 import { tabs, allButtonGroups } from "./mathEditorConstants";
 import './MathEditor.css'
@@ -67,11 +67,10 @@ function MathEditorV2({
   const safeValue = value ?? '';
   const mfRef = useRef<MathFieldElement>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [toolbarVisible, setToolbarVisible] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const isControlledRef = useRef(false);
   const isFocusedRef = useRef(false);
 
-  // Stable ref for onChange — always points to latest, never triggers re-registration
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -102,26 +101,20 @@ function MathEditorV2({
     applyMode(currentMode === 'text' ? 'math' : 'text');
   };
 
-  // Value sync — skips update while the user is actively focused to prevent stomping mid-type
   useEffect(() => {
     const mf = mfRef.current;
     if (!mf) return;
-
-    // Don't overwrite what the user is actively typing
     if (isFocusedRef.current) return;
-
     const currentValue = mf.getValue('latex');
     let cleanValue = safeValue;
     if (cleanValue === '""' || cleanValue === "''") cleanValue = '';
     cleanValue = convertDollarSignsToLatex(cleanValue);
-
     if (currentValue !== cleanValue) {
       mf.setValue(cleanValue);
       isControlledRef.current = true;
     }
   }, [safeValue]);
 
-  // Initialize math-field — empty deps so it only ever runs once
   useEffect(() => {
     const mf = mfRef.current;
     if (!mf) return;
@@ -138,7 +131,6 @@ function MathEditorV2({
     const handleInput = (e: Event) => {
       let newValue = (e.target as MathFieldElement).getValue('latex');
       if (newValue === '""' || newValue === "''") newValue = '';
-      // Normalize \lt / \gt back to < / > for clean storage
       newValue = newValue.replace(/\\lt\s?/g, '<').replace(/\\gt\s?/g, '>');
       if (onChangeRef.current && !isControlledRef.current) {
         onChangeRef.current(newValue);
@@ -146,13 +138,8 @@ function MathEditorV2({
       isControlledRef.current = false;
     };
 
-    const handleFocus = () => {
-      isFocusedRef.current = true;
-    };
-
-    const handleBlur = () => {
-      isFocusedRef.current = false;
-    };
+    const handleFocus = () => { isFocusedRef.current = true; };
+    const handleBlur = () => { isFocusedRef.current = false; };
 
     mf.addEventListener('input', handleInput);
     mf.addEventListener('focus', handleFocus);
@@ -165,7 +152,17 @@ function MathEditorV2({
       mf.removeEventListener('blur', handleBlur);
       mf.removeEventListener('mode-change', syncMode);
     };
-  }, []); // ← empty: register once, never re-register
+  }, []);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!modalOpen) return;
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setModalOpen(false);
+    };
+    document.addEventListener('keyup', handleKeyUp);
+    return () => document.removeEventListener('keyup', handleKeyUp);
+  }, [modalOpen]);
 
   const handleKeyDown = (e: React.KeyboardEvent<MathFieldElement>) => {
     if (!mfRef.current) return;
@@ -210,7 +207,17 @@ function MathEditorV2({
     }
   };
 
-  const toggleToolbar = () => setToolbarVisible(!toolbarVisible);
+  const handleModalInsert = (latexStr: string) => {
+    setModalOpen(false);
+    mfRef.current?.executeCommand('insert', latexStr);
+    mfRef.current?.focus();
+  };
+
+  const handleModalInsertWithPlaceholder = (latexStr: string) => {
+    setModalOpen(false);
+    mfRef.current?.executeCommand('insert', latexStr);
+    mfRef.current?.focus();
+  };
 
   const isMath = currentMode === 'math';
 
@@ -221,11 +228,11 @@ function MathEditorV2({
           {showToolbar && (
             <button
               type="button"
-              onClick={toggleToolbar}
+              onClick={() => setModalOpen(true)}
               className="toolbar-toggle"
-              title={toolbarVisible ? 'Hide toolbar' : 'Show toolbar'}
+              title="Open symbol picker"
             >
-              {toolbarVisible ? '▲ Hide Symbols' : '▼ Show Symbols'}
+              ▦ Symbols
             </button>
           )}
 
@@ -259,34 +266,60 @@ function MathEditorV2({
         onKeyDown={handleKeyDown}
       />
 
-      {showToolbar && !compact && (
-        <div className={`toolbar ${toolbarVisible ? '' : 'collapsed'}`}>
-          <div className="tabs">
-            {tabs.map((tab, index) => (
-              <div
-                key={index}
-                className={`tab ${activeTab === index ? 'active' : ''}`}
-                onClick={() => setActiveTab(index)}
-                title={tab.title}
+      {/* Symbol Picker Modal */}
+      {showToolbar && !compact && modalOpen && (
+        <div
+          className="symbol-modal-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Symbol picker"
+        >
+          <div className="symbol-modal">
+            <div className="symbol-modal-header">
+              <span className="symbol-modal-title">Insert Symbol</span>
+              <button
+                type="button"
+                className="symbol-modal-close"
+                onClick={() => setModalOpen(false)}
+                aria-label="Close symbol picker"
               >
-                {tab.label}
-              </div>
-            ))}
-          </div>
-
-          {allButtonGroups.map((buttonGroup, index) => (
-            <div
-              key={index}
-              className={`tab-content ${activeTab === index ? 'active' : ''}`}
-            >
-              <ButtonGroup
-                buttons={buttonGroup}
-                onInsert={insert}
-                onInsertWithPlaceholder={insertWithPlaceholder}
-                onInsertText={insertText}
-              />
+                ✕
+              </button>
             </div>
-          ))}
+
+            <div className="symbol-modal-tabs" role="tablist">
+              {tabs.map((tab, index) => (
+                <div
+                  key={index}
+                  className={`symbol-tab ${activeTab === index ? 'active' : ''}`}
+                  onClick={() => setActiveTab(index)}
+                  title={tab.title}
+                  role="tab"
+                  aria-selected={activeTab === index}
+                >
+                  <span className="symbol-tab-icon">{tab.label}</span>
+                  <span className="symbol-tab-name">{tab.title}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="symbol-modal-body">
+              {allButtonGroups.map((buttonGroup, index) => (
+                <div
+                  key={index}
+                  className={`tab-content ${activeTab === index ? 'active' : ''}`}
+                >
+                  <ButtonGroup
+                    buttons={buttonGroup}
+                    onInsert={handleModalInsert}
+                    onInsertWithPlaceholder={handleModalInsertWithPlaceholder}
+                    onInsertText={insertText}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
