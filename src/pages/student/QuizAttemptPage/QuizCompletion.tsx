@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle } from 'lucide-react';
 import type { Assignment, Question } from './types';
 import './StudentQuizView.css';
+import { useNavigate } from 'react-router-dom';
 
 interface QuizCompletionProps {
   quiz: Assignment;
@@ -16,7 +17,10 @@ const QuizCompletion: React.FC<QuizCompletionProps> = ({
   answeredCount,
   startTime
 }) => {
+  const navigate = useNavigate();
   const timeTaken = Math.floor((new Date().getTime() - startTime.getTime()) / 60000);
+
+
 
   return (
     <div className="assignment-creator">

@@ -57,7 +57,7 @@ export const QuestionsTab: React.FC<QuestionsTabProps> = ({
       alert('Failed to generate questions. Please try again.');
     } finally {
       setIsGenerating(false);
-    }
+    } 
   };
 
   return (
